@@ -1,0 +1,30 @@
+# ============================================================
+# Integração Contínua (CI) — corre os testes a cada push / pull request
+# ============================================================
+# Sempre que se envia código para o GitHub, esta ação instala as
+# dependências e corre a bateria de testes. O resultado (✓ / ✗) fica
+# visível no GitHub — é a garantia automática de que nada partiu.
+# ============================================================
+name: Testes
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obter o código
+        uses: actions/checkout@v4
+
+      - name: Preparar o Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Correr os testes
+        run: python -m unittest discover -s testes -p "test_*.py"

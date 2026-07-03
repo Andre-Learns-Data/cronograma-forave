@@ -1,0 +1,16 @@
+# Marcar binários — evita que o git converta fins-de-linha (o que corromperia
+# ficheiros como PDFs e imagens).
+*.pdf   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.ico   binary
+*.exe   binary
+
+# Normalizar fins-de-linha do texto para LF no repositório.
+*.py    text eol=lf
+*.md    text
+*.html  text
+*.css   text
+*.js    text
+*.csv   text

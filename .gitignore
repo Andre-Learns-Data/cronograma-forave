@@ -1,0 +1,39 @@
+# ============================================================
+# .gitignore — Ficheiros a excluir do GitHub
+# ============================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Dados locais (contêm emails — RGPD)
+dados/
+
+# Credenciais e segredos (NUNCA vão para o GitHub)
+credentials.json
+.env
+
+# VSCode
+.vscode/
+
+# Virtual environment
+.venv/
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+
+# Artefactos gerados (regeneráveis — ex: QR code pela opção 14 do menu)
+qr_cronograma.png
+
+# Build do executável (PyInstaller) — regenerável a partir do cronograma.spec
+build/
+dist/
+build_test/
+dist_test/
+*.exe
+

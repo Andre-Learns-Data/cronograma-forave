@@ -1,0 +1,24 @@
+# ============================================================
+# pyproject.toml — Configuração de ferramentas do projeto
+# ============================================================
+# Aqui fica a configuração do Ruff, o linter/formatter de Python
+# usado no projeto (verifica erros e uniformiza o estilo).
+#
+# Correr:   ruff check .      (analisa o código)
+#           ruff format .     (formata)
+#
+# Instalar (não é dependência do programa):  pip install ruff
+# ============================================================
+
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+
+# Não analisar pastas geradas/externas.
+extend-exclude = ["dados", "build_test", "dist_test", "*.spec"]
+
+[tool.ruff.lint]
+# Regras: erros reais do pycodestyle (E), pyflakes (F) e ordenação
+# de imports (I). O estilo do curso é deliberadamente simples
+# (evita compreensões/lambda) — o foco do linter é a correção.
+select = ["E", "F", "I"]

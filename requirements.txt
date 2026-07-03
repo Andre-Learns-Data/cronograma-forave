@@ -1,0 +1,34 @@
+# ============================================================
+# requirements.txt — Dependências do projecto
+# ============================================================
+# Instalar com: pip install -r requirements.txt
+# ============================================================
+
+# Leitura de variáveis de ambiente do ficheiro .env
+python-dotenv==1.1.0
+
+# Google Sheets API — sincronização com spreadsheet na cloud
+gspread==6.1.4
+google-auth==2.38.0
+
+# Flask — servidor web para o dashboard
+Flask==3.1.3
+
+# itsdangerous — assinatura dos tokens de reposição de password
+# ("esqueci-me"). Já vem como dependência do Flask; fica explícito aqui.
+itsdangerous==2.2.0
+
+# Geração de PDFs
+reportlab==4.5.1
+
+# Geração de QR codes (página pública / dashboard) — Bloco 4
+# O extra [pil] traz o Pillow, usado também para gerar os ícones do PWA
+qrcode==8.2
+pillow==12.2.0
+
+# Servidor de produção (usado no alojamento Render — Fase C).
+# Localmente em Windows não corre; o app.py usa app.run() para dev.
+gunicorn==23.0.0
+
+# Excel export (semana 4 — opcional)
+# openpyxl==3.1.5
