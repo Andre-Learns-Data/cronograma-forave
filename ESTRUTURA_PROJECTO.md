@@ -52,7 +52,7 @@ mesma lógica de domínio serve terminal, web e `.exe`.
 ### Mapa de ficheiros
 
 ```
-Python_projeto_final/
+cronograma-forave/
 │
 ├── main.py                          ← App de TERMINAL (coordenador) — python main.py
 ├── app.py                           ← Dashboard WEB (Flask) — python app.py

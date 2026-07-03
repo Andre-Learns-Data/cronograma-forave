@@ -58,7 +58,7 @@ Este guia explica como configurar a integração com Google Sheets para o Dashbo
 1. Na pasta do projeto, abrir a pasta `classes/`
 2. Colar o ficheiro `credentials.json` aqui:
    ```
-   c:\Users\marceloorso\Desktop\Matematica\PYTHON\classes\credentials.json
+   <pasta-do-projeto>\classes\credentials.json
    ```
 
 ⚠️ **IMPORTANTE**: O ficheiro contém dados sensíveis — **NUNCA comita para Git**!

@@ -39,7 +39,7 @@ git push origin main
 ## 2. Criar o serviço no Render
 
 1. Cria conta grátis em https://render.com (podes entrar com o GitHub).
-2. **New +** → **Web Service** → liga o repositório `Python_projeto_final`.
+2. **New +** → **Web Service** → liga o repositório `cronograma-forave`.
 3. O Render deteta o `render.yaml` e pré-preenche quase tudo:
    - Build Command: `pip install -r requirements.txt`
    - Start Command: `gunicorn app:app`
