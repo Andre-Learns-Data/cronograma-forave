@@ -1,0 +1,32 @@
+# ============================================================
+# render.yaml — Configuração de deploy no Render (Fase C)
+# ============================================================
+# "Blueprint" do Render: descreve o serviço web a criar. Ao ligar
+# o repositório ao Render, esta configuração é detectada e
+# pré-preenche o serviço. Ver o guia passo-a-passo em DEPLOY.md.
+#
+# NOTA: o ficheiro de credenciais do Google (credentials.json) NÃO
+# vai aqui nem para o GitHub — é carregado no Render como "Secret
+# File" e fica disponível em /etc/secrets/credentials.json.
+# ============================================================
+
+services:
+  - type: web
+    name: cronograma-forave
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      # Lê os dados (e as contas) do Google Sheet privado, não de ficheiros locais
+      - key: FONTE_DADOS
+        value: sheets
+      # Chave de sessão — o Render gera um valor aleatório seguro
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      # ID da spreadsheet — preencher manualmente no painel do Render
+      - key: GOOGLE_SHEETS_NOME
+        sync: false
+      # Caminho do credentials.json carregado como Secret File no Render
+      - key: GOOGLE_SHEETS_CREDENCIAIS
+        value: /etc/secrets/credentials.json

@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="pt"><head><meta charset="utf-8">
+<title>Guião de Demonstração — FORAVE</title>
+<style>
+@page { size: A4; margin: 2cm 1.8cm; }
+body { font-family: Helvetica, Arial, sans-serif; font-size: 11pt; color: #2b2b2b;
+       line-height: 1.45; max-width: 820px; margin: 24px auto; padding: 0 16px; }
+.cabecalho { border-bottom: 3px solid #f7c202; padding-bottom: 8px; margin-bottom: 8px; }
+.cabecalho img { height: 34px; }
+h1 { color: #0d4a30; font-size: 21pt; }
+h2 { color: #196141; font-size: 15pt; border-bottom: 1px solid #dfe5e2;
+     padding-bottom: 3px; margin-top: 24px; }
+h3 { color: #196141; font-size: 12.5pt; margin-top: 16px; }
+a { color: #196141; text-decoration: none; }
+code { background: #f2f5f3; padding: 1px 4px; border-radius: 3px;
+       font-family: Consolas, monospace; font-size: 10pt; }
+pre { background: #f2f5f3; padding: 8px 10px; border-radius: 5px;
+      border-left: 3px solid #196141; }
+pre code { background: none; padding: 0; }
+table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+th { background: #196141; color: #fff; text-align: left; padding: 5px 8px; font-size: 10pt; }
+td { border: 1px solid #dfe5e2; padding: 5px 8px; font-size: 10pt; }
+blockquote { background: #fffbe9; border-left: 4px solid #f7c202; margin: 10px 0;
+             padding: 8px 12px; color: #5a4b00; }
+.toc { background: #f4f7f5; border: 1px solid #dfe5e2; border-left: 4px solid #196141;
+       padding: 6px 14px; border-radius: 6px; }
+.toc ul { margin: 3px 0; padding-left: 18px; list-style: none; }
+.cb { display: inline-block; width: 11px; height: 11px; border: 1.5px solid #196141;
+      margin-right: 6px; }
+hr { border: none; border-top: 1px solid #e2e8e5; margin: 16px 0; }
+
+/* --- Três registos da demo: passo (lista) · resultado · comentário --- */
+/* O passo é o item numerado; a sua acção fica destacada a negrito. */
+ol > li { margin-bottom: 6px; }
+ol > li > p:first-child { font-weight: bold; color: #1f1f1f; }
+
+/* Caixas de destaque. Sem emojis — o destaque é a cor/caixa (rende no PDF).
+   Usam-se classes ÚNICAS (adm-*) e não compostas (.admonition.resultado),
+   porque o conversor de PDF (xhtml2pdf) tem suporte fraco a seletores compostos.
+   As classes são achatadas em _achatar_caixas() antes da conversão. */
+.adm-resultado, .adm-porque, .adm-bastidores, .adm-rgpd {
+    margin: 6px 0 10px; padding: 7px 12px 8px; border-radius: 5px; font-size: 10pt; }
+.adm-resultado p, .adm-porque p, .adm-bastidores p,
+.adm-rgpd p { margin: 0; font-weight: normal; }
+.admonition-title { font-weight: bold; font-size: 8.5pt; letter-spacing: .4px;
+                    text-transform: uppercase; margin: 0 0 3px; }
+
+/* Resultado esperado — VERDE (o que se deve ver no ecrã). */
+.adm-resultado { background: #eef6f1; border-left: 4px solid #196141; color: #274c3c; }
+.adm-resultado .admonition-title { color: #0d4a30; }
+
+/* Comentário (porquê / bastidores / rgpd) — AZUL-ARDÓSIA (o "porquê"). */
+.adm-porque, .adm-bastidores, .adm-rgpd {
+    background: #eef2f8; border-left: 4px solid #3a6ea5; color: #34465c; }
+.adm-porque .admonition-title, .adm-bastidores .admonition-title,
+.adm-rgpd .admonition-title { color: #274b73; }
+</style></head>
+<body>
+<div class="cabecalho"><img src="static/forave-logo.png" alt="FORAVE"></div>
+<h1 id="guiao-de-demonstracao-gestor-de-cronograma-forave">Guião de Demonstração — Gestor de Cronograma FORAVE</h1>
+<p>Este documento descreve, passo a passo, como demonstrar as funcionalidades do
+sistema. Está organizado por <strong>perfil de utilizador</strong> (Coordenador, Professor e
+Aluno), numa sequência lógica: o Coordenador prepara o curso, o Professor gere o
+seu módulo e lança notas, e o Aluno consulta os seus resultados.</p>
+<p>Para além de <em>o que</em> fazer, o guião explica também <em>porquê</em> as coisas estão feitas
+como estão — para dar uma noção da estratégia e das decisões de engenharia à medida
+que se percorre a demonstração. Cada passo usa três registos visuais:</p>
+<ul>
+<li><strong>Passo numerado</strong> — a ação a realizar (o que clicar/escrever).</li>
+</ul>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>O que se deve ver no ecrã depois da ação (caixa verde).</p>
+</div>
+<div class="adm-porque">
+<p class="admonition-title">Porquê / RGPD / Nos bastidores</p>
+<p>Comentário: a decisão de design, a escolha de privacidade ou um detalhe de
+como funciona por baixo (caixa azul). É opcional — pode ler-se ou saltar-se
+sem perder o fio dos passos.</p>
+</div>
+<blockquote>
+<p><strong>Contas para a demonstração</strong></p>
+<table>
+<thead>
+<tr>
+<th>Perfil</th>
+<th>Email</th>
+<th>Password</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Coordenador</td>
+<td><code>chronosforave@gmail.com</code></td>
+<td><code>demo1234</code></td>
+</tr>
+<tr>
+<td>Professor</td>
+<td><code>luis.cerejeira@forave.pt</code></td>
+<td><code>demo1234</code></td>
+</tr>
+<tr>
+<td>Alunos</td>
+<td><code>sofia.marques@forave.pt</code> · <code>tiago.fernandes@forave.pt</code> · <code>ines.rocha@forave.pt</code></td>
+<td><code>demo1234</code></td>
+</tr>
+<tr>
+<td>Aluno de teste (email real)</td>
+<td><code>alunoforavecetdados@gmail.com</code></td>
+<td><code>demo1234</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Estas contas e a password <code>demo1234</code> são criadas pelo <code>python seed_demo.py</code></strong>
+e servem a demonstração <strong>local</strong> (terminal, web local e <code>.exe</code>). O <strong>aluno de
+teste</strong> tem um email real: é nele que se recebem os avisos automáticos por email.</p>
+<p>No <strong>site alojado</strong> (secção 6), o acesso de coordenador é feito com as
+credenciais que acompanham a entrega (indicadas à parte, nunca no código).</p>
+</blockquote>
+<hr />
+<p><strong>Índice</strong></p>
+<div class="toc">
+<ul>
+<li><a href="#guiao-de-demonstracao-gestor-de-cronograma-forave">Guião de Demonstração — Gestor de Cronograma FORAVE</a><ul>
+<li><a href="#0-preparacao">0. Preparação</a></li>
+<li><a href="#1-pagina-publica-sem-sessao-iniciada">1. Página pública (sem sessão iniciada)</a></li>
+<li><a href="#2-perfil-coordenador">2. Perfil: Coordenador</a><ul>
+<li><a href="#21-visao-geral">2.1 Visão geral</a></li>
+<li><a href="#22-modulos-criar-importar-editar-remover">2.2 Módulos (criar, importar, editar, remover)</a></li>
+<li><a href="#23-professores-duas-formas">2.3 Professores (duas formas)</a></li>
+<li><a href="#24-alunos-inscrever-importar-editar-remover">2.4 Alunos (inscrever, importar, editar, remover)</a></li>
+<li><a href="#25-cronograma-agendar-as-aulas-data-horas-e-aula-dada">2.5 Cronograma — agendar as aulas (data, horas e "aula dada")</a></li>
+<li><a href="#26-exportacao-e-auditoria">2.6 Exportação e auditoria</a></li>
+</ul>
+</li>
+<li><a href="#3-perfil-professor">3. Perfil: Professor</a></li>
+<li><a href="#4-perfil-aluno">4. Perfil: Aluno</a></li>
+<li><a href="#5-notificacoes-por-email">5. Notificações por email</a></li>
+<li><a href="#6-outras-interfaces-e-canais">6. Outras interfaces e canais</a></li>
+<li><a href="#7-reposicao-de-password">7. Reposição de password</a></li>
+<li><a href="#8-estrutura-do-codigo-para-consulta">8. Estrutura do código (para consulta)</a></li>
+<li><a href="#9-alinhamento-com-a-materia-de-python-avancado">9. Alinhamento com a matéria de Python Avançado</a></li>
+<li><a href="#resumo-das-funcionalidades">Resumo das funcionalidades</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<hr />
+<h2 id="0-preparacao">0. Preparação</h2>
+<ol>
+<li>Abrir a pasta do projeto no editor de código (VS Code).</li>
+<li>Instalar as dependências (se necessário):
+   <code>pip install -r requirements.txt</code></li>
+<li>
+<p>Carregar os dados de demonstração (módulos, professores, alunos, avaliações,
+   notas e contas de acesso):
+   <code>python seed_demo.py</code></p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Mensagem de conclusão com o número de módulos, alunos e contas criados.</p>
+</div>
+<div class="adm-bastidores">
+<p class="admonition-title">Nos bastidores</p>
+<p>O <code>seed_demo.py</code> é <strong>idempotente</strong>: só cria dados de exemplo e pode correr
+as vezes que se quiser sem duplicar nem apagar nada. Isto torna a demo
+repetível — se algo correr mal a meio, basta voltar a semear.</p>
+</div>
+</li>
+</ol>
+<p>A aplicação pode ser demonstrada em três ambientes:</p>
+<table>
+<thead>
+<tr>
+<th>Ambiente</th>
+<th>Comando de arranque</th>
+<th>Endereço</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Web (local)</td>
+<td><code>python app.py</code></td>
+<td><a href="http://127.0.0.1:5000">http://127.0.0.1:5000</a></td>
+</tr>
+<tr>
+<td>Terminal</td>
+<td><code>python main.py</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>Site alojado</td>
+<td>(já em execução)</td>
+<td>URL do alojamento (ver secção 6)</td>
+</tr>
+</tbody>
+</table>
+<div class="adm-porque">
+<p class="admonition-title">Porquê</p>
+<p>O mesmo domínio (as classes em <code>classes/</code> e o <code>gestor_cronograma.py</code>) serve os
+três ambientes — só muda a "casca" que o apresenta. É a prova prática da
+separação entre <strong>lógica</strong> e <strong>apresentação</strong>: a regra de negócio escreve-se
+uma vez e reutiliza-se no terminal, na web e no executável.</p>
+</div>
+<hr />
+<h2 id="1-pagina-publica-sem-sessao-iniciada">1. Página pública (sem sessão iniciada)</h2>
+<ol>
+<li>
+<p>Abrir <a href="http://127.0.0.1:5000">http://127.0.0.1:5000</a> sem iniciar sessão.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Página inicial com a identidade do curso (CET, UFCD 10794, professor e
+grupo de trabalho).</p>
+</div>
+</li>
+<li>
+<p>Localizar a secção <strong>"Adicionar o cronograma ao calendário"</strong>.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Botão de download <code>.ics</code> e um código QR do cronograma.</p>
+</div>
+<div class="adm-rgpd">
+<p class="admonition-title">RGPD</p>
+<p>O horário é assumido como informação <strong>pública</strong> — não são dados pessoais —
+por isso o <code>.ics</code> do curso está aberto. Os dados pessoais (as notas) <strong>nunca</strong>
+aparecem nesta página; ficam sempre atrás de autenticação. Separámos de
+propósito o que é público do que é privado.</p>
+</div>
+</li>
+<li>
+<p>Introduzir um endereço inexistente (ex.: <code>/xyz</code>).</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Página de erro <strong>404</strong> com a identidade visual do sistema.</p>
+</div>
+<div class="adm-bastidores">
+<p class="admonition-title">Nos bastidores</p>
+<p>Até as páginas de erro (403/404/500) têm a marca e são tratadas pela
+aplicação. Somam-se a cabeçalhos de segurança HTTP aplicados a todas as
+respostas — pequenos toques de "produto", não só de "trabalho de escola".</p>
+</div>
+</li>
+</ol>
+<hr />
+<h2 id="2-perfil-coordenador">2. Perfil: Coordenador</h2>
+<ol>
+<li>
+<p>Iniciar sessão com <code>chronosforave@gmail.com</code> / <code>demo1234</code>.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Acesso à área de Administração, com visão de todos os módulos.</p>
+</div>
+<div class="adm-porque">
+<p class="admonition-title">Porquê</p>
+<p>O perfil (coordenador / professor / aluno) é determinado pelo <strong>email</strong> com
+que se inicia sessão, não por um campo à parte que se possa contradizer. Uma
+única fonte de verdade para a identidade evita incoerências.</p>
+</div>
+</li>
+</ol>
+<h3 id="21-visao-geral">2.1 Visão geral</h3>
+<ol>
+<li>
+<p>Consultar o painel principal.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Cartões de resumo, um <strong>gráfico de progresso dos módulos</strong> (% concluído,
+ordenado dos mais atrasados para os mais adiantados), lista de módulos e
+secção de indicadores.</p>
+</div>
+<div class="adm-bastidores">
+<p class="admonition-title">Nos bastidores</p>
+<p>Os indicadores e o gráfico são <strong>calculados</strong> a partir dos dados reais no
+momento — não são imagens fixas. O gráfico responde a uma pergunta útil ao
+coordenador ("quais os módulos atrasados?"), em vez de uma contagem sem sinal.</p>
+</div>
+</li>
+</ol>
+<h3 id="22-modulos-criar-importar-editar-remover">2.2 Módulos (criar, importar, editar, remover)</h3>
+<ol>
+<li>
+<p>Em <strong>Adicionar módulo</strong>, preencher o nome, a UFCD, o professor, as <strong>horas
+   totais previstas</strong> e o estado, e submeter.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>O módulo passa a constar na lista de módulos.</p>
+</div>
+<div class="adm-porque">
+<p class="admonition-title">Porquê</p>
+<p>Não se pede aqui "horas dadas": um módulo novo ainda não teve aulas, logo
+começa a <strong>0</strong>. As horas dadas passam a ser <strong>calculadas</strong> à medida que as
+aulas são marcadas (ver 2.5) — não é um número escrito à mão que possa
+divergir da realidade.</p>
+</div>
+</li>
+<li>
+<p>Em <strong>Importar módulos por CSV</strong>, selecionar <code>demo_modulos.csv</code> e importar.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Mensagem "Importação: N importado(s)". Módulos já existentes são assinalados
+como não importados.</p>
+</div>
+<div class="adm-bastidores">
+<p class="admonition-title">Nos bastidores</p>
+<p>A importação <strong>deteta duplicados</strong> pela chave do módulo (o nome): reimportar
+o mesmo ficheiro não cria repetidos, apenas assinala os que saltou. Oferecer
+as duas formas — manual <strong>e</strong> CSV — cobre tanto a edição pontual como a
+carga rápida de um curso inteiro exportado do Excel.</p>
+</div>
+</li>
+<li>
+<p><strong>Editar</strong> um módulo (professor, UFCD, estado, horas <strong>totais</strong>).</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Os valores atualizados refletem-se na lista.</p>
+</div>
+<div class="adm-porque">
+<p class="admonition-title">Porquê</p>
+<p>As horas <strong>dadas</strong> não se editam aqui — o campo é só de leitura, porque são
+calculadas a partir das aulas marcadas no cronograma (ver 2.5). Manter uma
+só forma de as alterar evita dois números a competir pela verdade.</p>
+</div>
+</li>
+<li>
+<p>Abrir um módulo e utilizar <strong>Remover módulo</strong> (confirmar no diálogo).</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>O módulo, com as suas avaliações e notas, é eliminado.</p>
+</div>
+<div class="adm-rgpd">
+<p class="admonition-title">RGPD</p>
+<p>A remoção é <strong>em cascata</strong>: apagar o módulo leva as avaliações e notas
+associadas, sem deixar dados órfãos. A confirmação existe de propósito —
+é uma ação destrutiva e irreversível.</p>
+</div>
+</li>
+</ol>
+<h3 id="23-professores-duas-formas">2.3 Professores (duas formas)</h3>
+<ol>
+<li>
+<p>Em <strong>Professores → Adicionar</strong>, indicar nome, email e módulos que gere.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>O professor passa a constar na lista.</p>
+</div>
+<div class="adm-porque">
+<p class="admonition-title">Porquê</p>
+<p>Associar um email a um professor é o que lhe <strong>atribui o perfil</strong> de
+Professor ao iniciar sessão (ver secção 3). O email é a ligação entre a
+pessoa e aquilo que está autorizada a ver.</p>
+</div>
+</li>
+<li>
+<p>Em <strong>importar professores por CSV</strong>, selecionar <code>demo_professores.csv</code>.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Professores importados; mensagem de resultado.</p>
+</div>
+</li>
+<li>
+<p>Editar ou remover um professor.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>A alteração reflete-se na lista.</p>
+</div>
+</li>
+</ol>
+<h3 id="24-alunos-inscrever-importar-editar-remover">2.4 Alunos (inscrever, importar, editar, remover)</h3>
+<ol>
+<li>
+<p>Em <strong>Formandos → Inscrever</strong>, indicar nome, email e módulos.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>O aluno passa a constar na lista.</p>
+</div>
+</li>
+<li>
+<p>Em <strong>importar formandos por CSV</strong>, selecionar <code>demo_formandos.csv</code>.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Alunos importados; mensagem de resultado.</p>
+</div>
+</li>
+<li>
+<p>Abrir um aluno e <strong>editar</strong> o nome ou os módulos inscritos; guardar.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Os dados atualizam-se.</p>
+</div>
+<div class="adm-porque">
+<p class="admonition-title">Porquê</p>
+<p>O <strong>email</strong> é a identidade do aluno — é a chave a que as notas estão
+associadas — por isso não se edita. Para o mudar, remove-se e volta-se a
+inscrever. Alterar uma chave em uso é sempre uma operação delicada;
+preferimos torná-la explícita.</p>
+</div>
+</li>
+<li>
+<p>Remover um aluno.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Surge um pedido de confirmação; ao confirmar, o aluno e as suas notas são
+eliminados.</p>
+</div>
+<div class="adm-rgpd">
+<p class="admonition-title">RGPD</p>
+<p>Apagar o aluno leva <strong>também</strong> as suas notas — o <em>direito ao apagamento</em> não
+fica meio feito. A confirmação prévia protege contra remoções acidentais.</p>
+</div>
+</li>
+</ol>
+<h3 id="25-cronograma-agendar-as-aulas-data-horas-e-aula-dada">2.5 Cronograma — agendar as aulas (data, horas e "aula dada")</h3>
+<ol>
+<li>
+<p>Abrir um módulo e, na secção <strong>Cronograma (aulas)</strong>, indicar o <strong>número de
+   aulas</strong> e gerar os campos. Cada aula tem três campos: a <strong>data</strong> (escolhida num
+   calendário), as <strong>horas</strong> dessa aula e uma marca <strong>"dada"</strong> (✓). Guardar.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Os dias de aula ficam agendados. As <strong>horas dadas</strong> do módulo passam a ser a
+<strong>soma das horas das aulas marcadas como dadas</strong> — o indicador "X/Y h" e as
+"horas em falta" atualizam-se sozinhos.</p>
+</div>
+<div class="adm-porque">
+<p class="admonition-title">Porquê</p>
+<p>As horas dadas são <strong>calculadas</strong>, não escritas à mão. Uma só fonte de
+verdade (as aulas marcadas) alimenta o indicador de progresso e as horas em
+falta — nunca há um total manual a contradizer o cronograma.</p>
+</div>
+<div class="adm-bastidores">
+<p class="admonition-title">Nos bastidores</p>
+<p>Cada aula (data + horas + "dada") é guardada numa coluna <strong>"Sessoes"</strong> (em
+JSON) na Google Sheet, de forma <strong>retrocompatível</strong>: módulos antigos, que só
+tinham datas e um total escrito à mão, continuam a funcionar. Guardar o
+cronograma <strong>não apaga</strong> um total já importado enquanto não se marcar
+nenhuma aula — os módulos vindos de CSV estão protegidos.</p>
+</div>
+</li>
+<li>
+<p>Marcar mais uma aula como <strong>dada</strong> (✓) e guardar de novo.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>As horas dadas aumentam e as horas em falta diminuem, sem qualquer edição
+manual do número.</p>
+</div>
+<div class="adm-porque">
+<p class="admonition-title">Módulos importados por CSV</p>
+<p>O CSV traz as horas <strong>totais</strong> e as datas das aulas, mas <strong>não</strong> as horas de
+cada aula nem a marca "dada" — é aqui, no cronograma, que essas se definem à
+medida que o curso avança. (Decisão consciente: pôr horas por sessão no CSV
+seria uma segunda porta de entrada para o mesmo dado, a arriscar
+divergências.)</p>
+</div>
+</li>
+</ol>
+<h3 id="26-exportacao-e-auditoria">2.6 Exportação e auditoria</h3>
+<ol>
+<li>
+<p>Gerar o <strong>Relatório PDF</strong>.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Download de um PDF com módulos e avaliações (com indicador de progresso
+durante a geração).</p>
+</div>
+</li>
+<li>
+<p>Utilizar a exportação <strong>.ics</strong> (curso completo) e, num módulo, <strong>.ics + QR</strong>.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Ficheiro de calendário / código QR do módulo.</p>
+</div>
+<div class="adm-porque">
+<p class="admonition-title">Porquê</p>
+<p>O QR só é usado onde acrescenta algo: como ponte de um meio <strong>não clicável</strong>
+(um cartaz, um slide) para o telemóvel. Na própria página não se põe um QR
+para a própria página — seria redundante.</p>
+</div>
+</li>
+<li>
+<p>Consultar o <strong>Registo de alterações</strong> e <strong>Descarregar o registo completo (CSV)</strong>.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Histórico das operações (autor, ação, data) — no ecrã as mais recentes, e o
+<strong>CSV com o histórico completo</strong> para arquivo/auditoria externa. Nas notas, é
+apresentado o valor anterior e o novo.</p>
+</div>
+<div class="adm-rgpd">
+<p class="admonition-title">Accountability</p>
+<p>O registo de auditoria responde a "quem fez o quê e quando". Guardar o valor
+<strong>anterior → novo</strong> nas notas dá rastreabilidade real — importante porque a
+autorização é por perfil, e o registo é a rede de segurança que a acompanha.</p>
+</div>
+</li>
+</ol>
+<hr />
+<h2 id="3-perfil-professor">3. Perfil: Professor</h2>
+<p>Terminar sessão e iniciar com <code>luis.cerejeira@forave.pt</code> / <code>demo1234</code>.</p>
+<ol>
+<li>
+<p>Aceder à Área do Professor ("Os meus módulos"). No topo, um <strong>Calendário</strong>
+   com as aulas e avaliações <strong>dos seus módulos</strong> (mesma peça da área do aluno,
+   agora filtrada ao âmbito do professor), com o botão <strong>.ics</strong> e o <strong>QR</strong> para
+   levar o cronograma para o telemóvel.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>É apresentado <strong>apenas</strong> o módulo atribuído (<em>Programação Avançada com
+Python</em>); os restantes módulos não são visíveis. O calendário mostra só os
+eventos desse módulo.</p>
+</div>
+<div class="adm-porque">
+<p class="admonition-title">Porquê</p>
+<p>A autorização é <strong>por âmbito</strong>: o professor vê e gere só os seus módulos, não
+é tudo-ou-nada. Foi uma evolução deliberada de um controlo de acesso simples
+(só coordenador podia tudo) para permissões mais finas por módulo.</p>
+</div>
+<div class="adm-rgpd">
+<p class="admonition-title">Accountability</p>
+<p>Tudo o que o professor altera (notas, cronograma, avaliações) fica no
+<strong>registo de auditoria</strong> com o <strong>email dele</strong> como autor. O professor é
+autónomo no seu módulo, mas nada do que faz fica sem rasto — o coordenador
+vê o histórico completo (o professor não vê a auditoria global).</p>
+</div>
+</li>
+<li>
+<p>Confirmar a ausência das secções de coordenação (criar módulos, gerir
+   professores e formandos, auditoria global).</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Estas secções não estão disponíveis para o professor.</p>
+</div>
+</li>
+<li>
+<p>No <strong>Cronograma (aulas)</strong> do módulo, marcar como <strong>dada</strong> (✓) uma aula ainda por
+   dar e guardar.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>As <strong>horas dadas</strong> do módulo aumentam (soma das aulas dadas) e as horas em
+falta diminuem.</p>
+</div>
+<div class="adm-porque">
+<p class="admonition-title">Porquê</p>
+<p>O professor gere as horas do seu módulo <strong>sem depender do coordenador</strong> — a
+autorização por âmbito torna-o autónomo dentro do que é seu.</p>
+</div>
+</li>
+<li>
+<p>Criar ou editar uma <strong>avaliação</strong> no módulo. A <strong>data</strong> escolhe-se num
+   calendário; cada campo tem uma dica do que se espera (só a <em>Descrição</em> é
+   obrigatória). Opcionalmente, marcar <strong>"Avisar a turma por email"</strong>.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>A avaliação passa a constar; o campo "tipo" apresenta sugestões (Teste,
+Projeto, etc.). Com a caixa marcada e uma data definida, cada aluno inscrito
+recebe um email a anunciar (ou atualizar) a avaliação.</p>
+</div>
+<div class="adm-bastidores">
+<p class="admonition-title">Nos bastidores</p>
+<p>As sugestões vêm de uma lista (<code>datalist</code>) para uniformizar os tipos sem
+obrigar a menus rígidos. O aviso à turma reutiliza o mesmo mecanismo do
+reagendamento de aulas (envio individual a cada aluno, nunca em conjunto).</p>
+</div>
+</li>
+<li>
+<p>Lançar uma <strong>nota</strong> a um aluno. Para demonstrar a <strong>notificação individual</strong>,
+   marcar a opção <strong>"avisar cada aluno da sua nota por email"</strong> antes de guardar —
+   utilizar o aluno de teste <code>alunoforavecetdados@gmail.com</code> para verificar a
+   receção (secção 5).</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>A nota é registada; com a opção marcada, é enviado ao aluno um email com a
+sua nota. A nota fica visível na área do aluno (secção 4).</p>
+</div>
+<div class="adm-rgpd">
+<p class="admonition-title">RGPD</p>
+<p>O aviso de nota é <strong>individual</strong>: cada aluno é notificado apenas da <strong>sua</strong>
+nota, nunca das dos outros. A notificação respeita o mesmo isolamento de
+dados que o resto do sistema.</p>
+</div>
+</li>
+<li>
+<p>Reagendar uma aula (alterar uma data) com a opção <strong>"avisar a turma"</strong> e um
+   motivo.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>A data é atualizada e é preparada a notificação à turma (ver secção 5).</p>
+</div>
+<div class="adm-porque">
+<p class="admonition-title">Porquê</p>
+<p>Este era o problema real que deu origem ao projeto: as mudanças de data não
+chegavam a tempo aos formandos. Aqui, reagendar e avisar a turma é <strong>uma só
+ação</strong> — a comunicação deixa de depender de alguém se lembrar de a fazer.</p>
+</div>
+</li>
+</ol>
+<hr />
+<h2 id="4-perfil-aluno">4. Perfil: Aluno</h2>
+<p>Terminar sessão e iniciar com <code>sofia.marques@forave.pt</code> / <code>demo1234</code>. O aluno entra
+na sua página pessoal, <strong>"A minha área"</strong> (calendário + notas).</p>
+<ol>
+<li>
+<p>Consultar <strong>"O meu calendário"</strong> no topo da página. Alternar entre <strong>Mês</strong> e
+   <strong>Semana</strong> e navegar com <strong>‹ ›</strong> e <strong>Hoje</strong>.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Um calendário com as <strong>aulas</strong> (verde; as já dadas a verde-suave com ✓) e as
+<strong>avaliações</strong> (dourado) dos módulos do aluno. O dia de hoje fica destacado.</p>
+</div>
+<div class="adm-bastidores">
+<p class="admonition-title">Nos bastidores</p>
+<p>O calendário é <strong>feito de raiz</strong> (<code>static/calendario.js</code>), sem bibliotecas
+externas — só JavaScript e o DOM. O servidor prepara os eventos <strong>só deste
+aluno</strong> (RGPD); o cliente desenha as vistas mês/semana.</p>
+</div>
+</li>
+<li>
+<p>Por baixo do calendário, usar <strong>"Adicionar ao meu telemóvel (.ics)"</strong> ou o
+   <strong>QR code</strong>.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Descarrega um ficheiro <code>.ics</code> (ou, pelo QR, abre-o no telemóvel) que junta as
+aulas ao calendário do dispositivo.</p>
+</div>
+<div class="adm-porque">
+<p class="admonition-title">Porquê</p>
+<p>O QR é a ponte ecrã→telemóvel: reutiliza o <code>.ics</code> <strong>público</strong> do curso (o
+horário não são dados pessoais — as notas nunca saem por aqui).</p>
+</div>
+</li>
+<li>
+<p>Consultar <strong>As minhas notas</strong>.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Módulos em que está inscrita, cada avaliação com a nota respetiva e a <strong>nota
+final (UFCD)</strong> calculada por média ponderada (ex.: <strong>16.9</strong> em Programação
+Avançada).</p>
+</div>
+<div class="adm-bastidores">
+<p class="admonition-title">Nos bastidores</p>
+<p>A nota final é uma <strong>média ponderada</strong> pelos pesos das avaliações, calculada
+a partir das notas lançadas — o aluno vê o resultado sem ter de fazer contas.</p>
+</div>
+</li>
+<li>
+<p>Verificar a nota lançada pelo professor na secção 3.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>A nota está visível para a aluna.</p>
+</div>
+</li>
+<li>
+<p>Confirmar o isolamento de dados.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>A aluna não tem acesso a notas de outros alunos.</p>
+</div>
+<div class="adm-rgpd">
+<p class="admonition-title">RGPD</p>
+<p>O isolamento de dados é um requisito, não um detalhe: cada aluno vê apenas o
+que é seu. É a mesma regra que atravessa a página pública, as notificações e
+a área pessoal.</p>
+</div>
+</li>
+<li>
+<p>(Opcional) Iniciar sessão como <code>tiago.fernandes@forave.pt</code>.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Apenas os dados desse aluno são apresentados.</p>
+</div>
+</li>
+</ol>
+<hr />
+<h2 id="5-notificacoes-por-email">5. Notificações por email</h2>
+<p>O sistema envia avisos por email em três casos: <strong>nota individual</strong> ao aluno,
+<strong>reagendamento</strong> de uma aula à turma e <strong>avaliação marcada/atualizada</strong> à turma.</p>
+<ol>
+<li>Lançar uma nota (ou reagendar uma aula) que envolva o aluno de teste
+   <code>alunoforavecetdados@gmail.com</code>.</li>
+<li>
+<p>Verificar a caixa de correio desse aluno, <strong>incluindo a pasta de Spam</strong>.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Receção do aviso correspondente. O email vem de <strong>"Cronograma FORAVE"</strong>
+(<code>chronosforave@gmail.com</code>), mas ao clicar em <strong>Responder</strong> a resposta abre
+para <strong>quem fez a alteração</strong> (ex.: o professor).</p>
+</div>
+</li>
+</ol>
+<div class="adm-porque">
+<p class="admonition-title">Remetente institucional, resposta pessoal (Reply-To)</p>
+<p>O remetente é <strong>sempre</strong> o endereço institucional verificado na Brevo — não pode
+ser o email pessoal do professor (a Brevo rejeitaria um remetente não verificado).
+Para não perder o toque pessoal, define-se um <strong>Reply-To</strong> com o email de quem
+despoletou o aviso: o envio continua institucional (e aceite), mas as <strong>respostas
+dos alunos vão ter com o professor/coordenador</strong> que agiu.</p>
+</div>
+<div class="adm-bastidores">
+<p class="admonition-title">Nos bastidores — porquê a Brevo</p>
+<p>No alojamento (Render), o envio direto por SMTP está <strong>bloqueado</strong> — uma
+restrição comum nos serviços de alojamento para travar spam. Por isso o envio em
+produção passa por um <strong>serviço transacional (Brevo)</strong>, por API. Localmente, o
+envio direto por SMTP continua disponível como alternativa. A arquitetura prevê
+os dois caminhos.</p>
+</div>
+<div class="adm-rgpd">
+<p class="admonition-title">Porquê pode ir para Spam</p>
+<p>O remetente da demo é um endereço <strong>gratuito</strong> (Gmail). Pelas regras de
+autenticação de email (SPF/DKIM/DMARC), uma mensagem enviada em nome de um
+endereço gratuito através de um serviço transacional pode ser classificada como
+<strong>spam</strong> — daí a instrução de verificar essa pasta. Em produção recomenda-se um
+<strong>domínio próprio</strong>. É uma limitação conhecida e assumida, não um defeito por
+resolver.</p>
+</div>
+<blockquote>
+<p><strong>Acesso à caixa de teste:</strong> por segurança, as credenciais de acesso à conta
+<code>alunoforavecetdados@gmail.com</code> não constam do projeto; são indicadas na
+mensagem de entrega.</p>
+</blockquote>
+<hr />
+<h2 id="6-outras-interfaces-e-canais">6. Outras interfaces e canais</h2>
+<ol>
+<li>
+<p><strong>Terminal:</strong> executar <code>python main.py</code>.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Menu por opções, sobre os mesmos dados da versão web.</p>
+</div>
+</li>
+<li>
+<p><strong>Executável (.exe):</strong> ver <code>INSTRUCOES_EXE.md</code>.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>A aplicação de terminal corre sem Python instalado.</p>
+</div>
+</li>
+<li>
+<p><strong>Site alojado:</strong> abrir o URL do alojamento e iniciar sessão como coordenador;
+   importar <code>demo_modulos.csv</code>, <code>demo_formandos.csv</code> e <code>demo_professores.csv</code>.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Os dados ficam disponíveis no site (leitura a partir do Google Sheet).</p>
+</div>
+</li>
+<li>
+<p><strong>Instalação como aplicação (PWA):</strong> a partir do site, instalar no dispositivo.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>O sistema fica acessível como aplicação.</p>
+</div>
+</li>
+</ol>
+<div class="adm-porque">
+<p class="admonition-title">Porquê tantos canais</p>
+<p>Terminal, web, executável, PDF, QR, <code>.ics</code> e email são todos "cascas" sobre a
+<strong>mesma lógica</strong>. Mostrá-los prova que a arquitetura separa a regra de negócio
+da forma como é consumida — o objetivo desde o início.</p>
+</div>
+<hr />
+<h2 id="7-reposicao-de-password">7. Reposição de password</h2>
+<ol>
+<li>
+<p>No ecrã de início de sessão, selecionar <strong>Esqueci-me da password</strong> e indicar um
+   email.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>É gerado um link seguro (token assinado, de uso único e com validade) para
+definir uma nova password.</p>
+</div>
+<div class="adm-rgpd">
+<p class="admonition-title">Nos bastidores — segurança</p>
+<p>As passwords são guardadas como <strong>hash</strong> (num só sentido) — nem nós as vemos.
+Por isso "esqueci-me" resolve-se com uma <strong>reposição</strong>, não com uma
+recuperação: gera-se um link assinado e temporário, em vez de reenviar a
+password antiga.</p>
+</div>
+</li>
+</ol>
+<hr />
+<h2 id="8-estrutura-do-codigo-para-consulta">8. Estrutura do código (para consulta)</h2>
+<p>Cada ficheiro inclui um cabeçalho com o seu propósito; cada classe e método têm
+documentação (docstrings). Percurso recomendado:</p>
+<ul>
+<li><code>README.md</code> e <code>ESTRUTURA_PROJECTO.md</code> — arquitetura, mapa de ficheiros e decisões.</li>
+<li><code>classes/</code> — domínio (POO): <code>modulo.py</code>, <code>formando.py</code>, <code>avaliacao_final.py</code>,
+  <code>professor.py</code>, <code>gerador_ics.py</code>, <code>token_modulo.py</code>, <code>autenticacao.py</code>, entre outros.</li>
+<li><code>gestor_cronograma.py</code> — orquestração do domínio (CRUD e persistência).</li>
+<li><code>app.py</code> (web) e <code>main.py</code> (terminal) — interfaces sobre o mesmo domínio.</li>
+<li><code>testes/</code> — testes automáticos:
+  <code>python -m unittest discover -s testes</code></li>
+</ul>
+<hr />
+<h2 id="9-alinhamento-com-a-materia-de-python-avancado">9. Alinhamento com a matéria de Python Avançado</h2>
+<p>O projeto aplica, num problema real, os conceitos trabalhados ao longo da UFCD —
+partindo de Python puro (terminal + POO) e crescendo para web + cloud, sempre com
+a <strong>mesma lógica</strong> no centro.</p>
+<table>
+<thead>
+<tr>
+<th>Conceito da UFCD</th>
+<th>Onde se aplica no projeto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Programação Orientada a Objetos</strong> (classes, atributos, métodos)</td>
+<td>Pasta <code>classes/</code>: <code>Modulo</code>, <code>Formando</code>, <code>Professor</code>, <code>Avaliacao</code>, <code>GestorCronograma</code>, <code>Utilizador</code>…</td>
+</tr>
+<tr>
+<td><strong>Responsabilidade única / separação de camadas</strong></td>
+<td>A lógica <strong>devolve dados</strong> (sem <code>print</code>); a apresentação fica para quem chama (<code>main.py</code> no terminal, <code>app.py</code> na web)</td>
+</tr>
+<tr>
+<td><strong>Dicionários e listas</strong></td>
+<td>Estrutura dos dados em memória; <code>to_dict()</code> / <code>from_dict()</code> para converter objeto ↔ dicionário</td>
+</tr>
+<tr>
+<td><strong>Ficheiros e persistência (JSON)</strong></td>
+<td><code>dados/*.json</code> como fonte de verdade local (stdlib <code>json</code>)</td>
+</tr>
+<tr>
+<td><strong>Tratamento de erros (<code>try</code>/<code>except</code>)</strong></td>
+<td>Importação de CSV robusta (conta erros por linha), rede/email com <em>timeout</em> — nunca "rebenta"</td>
+</tr>
+<tr>
+<td><strong>Funções com parâmetros e retorno</strong></td>
+<td>Todos os métodos do domínio; funções puras e testáveis</td>
+</tr>
+<tr>
+<td><strong>Strings e f-strings</strong></td>
+<td>Mensagens, corpos de email, relatório PDF</td>
+</tr>
+<tr>
+<td><strong>Ciclos e condições</strong></td>
+<td>Percursos de dados (<code>for</code>/<code>if</code>) em todo o domínio</td>
+</tr>
+<tr>
+<td><strong>Modularização (multi-ficheiro)</strong></td>
+<td>Domínio (<code>classes/</code>) separado das interfaces (<code>app.py</code> / <code>main.py</code>) e das integrações</td>
+</tr>
+<tr>
+<td><strong>Integração com serviços/APIs</strong></td>
+<td>Google Sheets (<code>gspread</code>), email transacional (Brevo por HTTP), web (Flask)</td>
+</tr>
+<tr>
+<td><strong>Boas práticas de desenvolvimento</strong></td>
+<td>Git/GitHub, <code>.gitignore</code>, <code>requirements.txt</code>, <strong>testes automáticos</strong> (unittest) e <strong>CI</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Cada ficheiro tem um cabeçalho a explicar o seu propósito e a ligação à matéria;
+cada classe e método têm <em>docstrings</em>. É o percurso recomendado para o professor
+confirmar, no código, que cada decisão segue o que foi dado nas aulas.</p>
+</blockquote>
+<hr />
+<h2 id="resumo-das-funcionalidades">Resumo das funcionalidades</h2>
+<ul>
+<li>Três perfis (Coordenador, Professor, Aluno) com isolamento de dados (RGPD).</li>
+<li>Controlo de horas por aula: cada sessão tem horas e marca de "dada"; as horas
+  dadas (e as horas em falta) são calculadas automaticamente.</li>
+<li>Múltiplos canais sobre a mesma lógica: terminal, web, PDF, QR e <code>.ics</code> / email.</li>
+<li>Duas formas de carregamento em massa: manual e CSV (módulos, formandos, professores).</li>
+<li>Execução local (terminal, web, executável) e alojada (site, PWA, Google Sheet).</li>
+<li>Registo de alterações (auditoria), notificações, cabeçalhos de segurança e
+  acessibilidade.</li>
+</ul>
+</body></html>
