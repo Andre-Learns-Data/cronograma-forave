@@ -513,7 +513,7 @@ def dados_aluno(gestor, email):
 
     if formando is None:
         # Tem conta mas já não está na lista de formandos (ex: removido)
-        return {"email": email, "nome": email, "modulos": []}
+        return {"email": email, "nome": email, "modulos": [], "eventos": []}
 
     modulos_aluno = []
     # Eventos para o calendário visual (aulas + avaliações dos módulos do aluno).
