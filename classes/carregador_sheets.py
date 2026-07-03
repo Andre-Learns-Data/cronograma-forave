@@ -106,8 +106,8 @@ def gestor_a_partir_de_sheets(gsheets, pasta_dados="dados"):
     Lê as tabs do Google Sheet e devolve um GestorCronograma.
 
     Reconstrói módulos (com avaliações e notas), formandos e
-    alterações — o suficiente para alimentar o dashboard público
-    (módulos/insights) e a área autenticada do aluno (notas).
+    alterações — o suficiente para alimentar a dashboard alojada
+    (módulos/insights, atrás de login) e a área do aluno (notas).
 
     Parâmetros:
         gsheets (GoogleSheetsSync): ligação JÁ conectada ao Sheet.

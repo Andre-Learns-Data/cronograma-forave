@@ -7,34 +7,40 @@
 > professores, avaliações, notas) + **importação CSV** (módulos/formandos/
 > professores) + **registo de alterações (auditoria)** + **notificações**
 > (turma/aluno) + **exportação `.ics` e QR** + **identidade visual FORAVE**.
-> **138 testes automáticos.**
+> **150 testes automáticos.**
 
 ---
 
-### Arquitectura em duas metades — "o coordenador escreve, a turma consulta"
+### Arquitectura — três papéis, uma só lógica
+
+O papel é decidido pelo **email**: **coordenador** (gere tudo), **professor**
+(gere só o seu módulo — âmbito/RBAC) e **aluno** (consulta só as suas notas). A
+mesma lógica de domínio serve terminal, web e `.exe`.
 
 ```
-   COORDENADOR (escreve)                         TURMA (consulta)
-   --------------------                          ----------------
-   Terminal: python main.py                      Dashboard pública (web)
-        |  módulos, avaliações, notas,                ^  cronograma, progresso,
-        |  importar CSV, QR...                        |  avaliações, indicadores
-        v                                             |
-   JSON local (dados/)  ----- opção S ----->     Google Sheet (privado)
-   FONTE DE VERDADE          sincroniza               |
-   (offline-first)                                    v
-                                            Dashboard alojada (Render, Flask)
-                                            lê do Sheet  +  Área do aluno
-                                            (login → vê SÓ as suas notas, RGPD)
+   ESCREVEM (staff, com âmbito)                  CONSULTA (turma)
+   ----------------------------                  ----------------
+   Coordenador -> todos os módulos               Aluno (login) -> só as
+   Professor   -> só o seu módulo                suas notas + calendário
+              |                                          ^
+    terminal (main.py)  OU  web (app.py)           web (perfil pelo email)
+              |                                          |
+              v                                          |
+     JSON local (dados/)  --opção S-->  Google Sheet -->  Dashboard alojada
+     FONTE DE VERDADE      sincroniza   (privado)         (Render, lê do Sheet)
+     (offline-first)                                      + landing pública (RGPD)
 ```
 
 - **Domínio (Python puro):** classes em `classes/`, orquestradas pelo `GestorCronograma`.
 - **Persistência local:** JSON em `dados/` (fonte de verdade) + importação CSV.
 - **Cloud:** Google Sheet privado (espelho), lido pela dashboard alojada.
-- **Interfaces:** terminal (escrita) + dashboard web (leitura pública + área de aluno) + PWA + QR.
+- **Interfaces:** terminal + web (Flask) + `.exe` + PWA + QR — a mesma lógica, várias "cascas".
+- **Escrita:** no PC pelo terminal (opção **S** sincroniza para o Sheet); no site,
+  o **coordenador e o professor** escrevem pela web, gravando de volta no Sheet de
+  forma cirúrgica. A **landing** é pública (sem dados); tudo o resto fica atrás de login.
 
 > **Evolução (30/Jun): a web também ESCREVE.** Além de mostrar, o site tem agora
-> uma **área de administração** (só coordenador) que gere módulos, avaliações e
+> uma **área de administração** (coordenador e professor, cada um no seu âmbito) que gere módulos, avaliações e
 > notas e altera o cronograma — escrevendo de volta no Google Sheet de forma
 > **cirúrgica** (só a tab afectada). O acesso é por **papel** (autorização/RBAC):
 > a lista `COORDENADOR_EMAILS` define quem é coordenador. Há ainda **recuperação
@@ -130,7 +136,7 @@ Python_projeto_final/
 │   ├── sw.js                        ← Service worker (cache; nunca guarda dados pessoais)
 │   ├── icon-192.png / icon-512.png  ← Ícones
 │
-├── testes/                          ← Bateria de testes (unittest) — 138 testes
+├── testes/                          ← Bateria de testes (unittest) — 150 testes
 │   ├── fakes.py                     ← Dublês do Google Sheets (sem rede)
 │   ├── test_dominio.py              ← Modulo, Avaliacao, Formando
 │   ├── test_gestor.py               ← CRUD, notas, RGPD, persistência

@@ -40,36 +40,39 @@ aluno), indicando a ação e o resultado esperado em cada passo.
 
 ---
 
-## Arquitetura em duas metades
+## Arquitetura
 
-A regra do sistema é simples: **o coordenador escreve, a turma consulta.**
+O papel de cada utilizador é decidido pelo **email** com que inicia sessão —
+são **três perfis**:
+
+- **Coordenador** — gere **tudo** (todos os módulos, avaliações, notas, cronograma).
+- **Professor** — gere **só o(s) seu(s) módulo(s)** (autorização por âmbito / RBAC).
+- **Aluno** — **consulta** apenas os **seus** dados (notas + calendário) — RGPD.
+
+A **mesma lógica de domínio** (POO, em `classes/`) é reutilizada por três interfaces —
+**terminal** (`main.py`), **web** (`app.py`) e **executável** (`.exe`) — que só mudam
+a forma de apresentar e receber os dados.
 
 ```
-   COORDENADOR (escreve)                      TURMA (consulta)
-   --------------------                       ----------------
-   Terminal  (python main.py)                 Dashboard pública (web)
-        |  cria módulos, lança notas,              ^  cronograma, progresso,
-        |  importa CSV, etc.                       |  avaliações
-        v                                          |
-   JSON local (dados/)  ---- sincroniza ---->  Google Sheet (privado)
-   (fonte de verdade)        (opção S)              |
-                                                    v
-                                          Dashboard alojada (Render)
-                                          lê do Sheet + Área do aluno
-                                          (login → vê só as suas notas)
+   ESCREVEM (staff, com âmbito)                CONSULTA (turma)
+   ----------------------------                ----------------------
+   Coordenador -> todos os módulos             Aluno (login) -> só as
+   Professor   -> só o seu módulo              suas notas + calendário
+              |                                         ^
+    terminal (main.py)  OU  web (app.py)          web (perfil pelo email)
+              |                                         |
+              v                                         |
+     dados/*.json  --sincroniza (S)-->  Google Sheet -->  Dashboard alojada
+     (local, offline-first)             (privado)         (Render, lê do Sheet)
 ```
 
-- **Fonte de verdade:** ficheiros JSON locais (offline-first).
-- **Cloud:** Google Sheet privado, espelho dos dados, lido pela dashboard alojada.
-- **Página inicial pública (landing):** só boas-vindas + opções de entrada por
-  perfil — **sem dados do curso** (RGPD). O cronograma (módulos, progresso,
-  gráfico, PDF) fica em `/cronograma`, **atrás de login** (qualquer perfil).
-- **Área do aluno (autenticada):** cada aluno vê só as suas notas (RGPD).
-- **Área do coordenador (autenticada):** o coordenador também pode **escrever
-  pela web** — gerir módulos/avaliações/notas e alterar o cronograma (avisando a
-  turma). A escrita web grava de volta no Google Sheet de forma cirúrgica. Ou
-  seja: a regra "o coordenador escreve" passou a ter **dois canais** (terminal e
-  web), enquanto a turma continua só a consultar.
+- **No PC** (terminal / `.exe`): a **fonte de verdade** são os `dados/*.json`,
+  enviados para o Sheet pela opção **S (Sincronizar)**.
+- **No site alojado**: o coordenador **e** o professor **escrevem pela web**,
+  gravando de forma cirúrgica de volta no **Google Sheet**; a dashboard reconstrói
+  os dados a partir dele.
+- **Landing pública:** só boas-vindas + entrada por perfil — **sem dados do curso**
+  (RGPD). Todo o cronograma e as notas ficam **atrás de login**.
 
 ---
 
@@ -256,9 +259,9 @@ Depois abrir `http://127.0.0.1:5000`.
 4. Cada aluno vai ao site, **regista-se** com o seu email (que tem de estar na
    lista de formandos) e **entra** para ver as suas notas.
 
-> ⚠️ **RGPD:** ao sincronizar dados com nomes de alunos, o dashboard público
-> pode mostrá-los — obter consentimento da turma antes. As **notas** são sempre
-> privadas (só o aluno autenticado vê as suas).
+> ⚠️ **RGPD:** ao sincronizar dados com nomes de alunos, a dashboard (atrás de
+> login) mostra-os a quem tem acesso — obter consentimento da turma antes. As
+> **notas** são sempre privadas (só o aluno autenticado vê as suas).
 
 ---
 
@@ -274,7 +277,7 @@ O passo-a-passo completo está em **[DEPLOY.md](DEPLOY.md)**.
 ```bash
 python -m unittest discover -s testes -p "test_*.py"
 ```
-São **138 testes** (unittest) que cobrem o domínio, o gestor, a importação CSV, a
+São **150 testes** (unittest) que cobrem o domínio, o gestor, a importação CSV, a
 autenticação, a sincronização com o Sheet e as rotas web (incluindo o isolamento
 RGPD entre alunos e o registo de auditoria da área de admin). Correm
 automaticamente no GitHub a cada *push* (ver `.github/workflows/`).

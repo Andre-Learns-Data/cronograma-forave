@@ -4,9 +4,11 @@ Este guia põe a dashboard **online**, para a turma toda lhe aceder com login.
 O **programa de terminal continua a funcionar local, sem nada disto** — isto é só
 para a versão alojada na internet.
 
-> **Como funciona, em duas linhas:** o coordenador escreve no terminal → sincroniza
-> para o Google Sheet privado (opção `S`) → o site alojado lê do Sheet. As contas dos
-> alunos também ficam no Sheet (tab "Utilizadores"), por isso sobrevivem a reinícios.
+> **Como funciona, em duas linhas:** o *staff* escreve — no PC pelo terminal
+> (opção `S` sincroniza para o Google Sheet privado) **ou** no próprio site
+> (coordenador em tudo, professor só no seu módulo), gravando de volta no Sheet; o
+> site alojado lê do Sheet. As contas de acesso também ficam no Sheet (tab
+> "Utilizadores"), por isso sobrevivem a reinícios.
 
 ---
 
