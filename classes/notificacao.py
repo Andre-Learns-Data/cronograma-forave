@@ -1,9 +1,10 @@
 # ============================================================
 # notificacao.py — Classe Notificacao
 # ============================================================
-# Gere o envio de notificações sobre alterações ao cronograma.
-# Suporta três canais: consola (print), ficheiro (.txt) e
-# email (smtplib). Cada canal é independente.
+# Gere o registo de notificações sobre alterações ao cronograma.
+# Oferece dois canais próprios de saída: consola (print) e
+# ficheiro (.txt). O envio por email é tratado pelas classes
+# EmailSender / BrevoSender (usadas pelo main.py e pelo app.py).
 #
 # Alinhado com: Aula 5 (POO), Sessão Online 6 (ficheiros)
 # ============================================================
@@ -114,40 +115,6 @@ class Notificacao:
 
         except FileNotFoundError:
             print(f"  Erro: pasta não encontrada para gravar {caminho}")
-
-    # --------------------------------------------------------
-    # Canal 3: Email — envia via smtplib (futuro)
-    # --------------------------------------------------------
-
-    def enviar_email(self, remetente, password, servidor_smtp, porta):
-        """
-        Envia a notificação por email a todos os destinatários.
-
-        NOTA: Esta funcionalidade será implementada na semana 3.
-        Por agora, mostra apenas uma simulação no terminal.
-
-        Parâmetros:
-            remetente (str): Email do remetente.
-            password (str): Password ou app password do remetente.
-            servidor_smtp (str): Servidor SMTP (ex: "smtp.gmail.com").
-            porta (int): Porta do servidor (ex: 587).
-        """
-        # TODO: Implementar com smtplib na semana 3
-        # Por agora, simular o envio
-        print()
-        print("  [SIMULAÇÃO DE ENVIO DE EMAIL]")
-        print(f"  De: {remetente}")
-        print(f"  Servidor: {servidor_smtp}:{porta}")
-        print()
-
-        for d in self.destinatarios:
-            print(f"  → Email enviado para: {d['nome']} ({d['email']})")
-
-        print()
-        print(f"  Total: {len(self.destinatarios)} emails enviados (simulação)")
-        print()
-
-        self.enviada = True
 
     # --------------------------------------------------------
     # Métodos de conversão — objecto <-> dicionário (para JSON)
