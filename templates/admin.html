@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administração — Cronograma FORAVE</title>
+    <meta name="theme-color" content="#196141">
+    <link rel="icon" href="/static/icon-192.png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='forave.css') }}">
+    <style>
+        body { background-color: #f5f6fa; }
+        .topo {
+            background: linear-gradient(135deg, #196141 0%, #0d4a30 100%);
+            color: white; padding: 18px 0; margin-bottom: 20px;
+        }
+        .card { margin-bottom: 18px; }
+        .mod-titulo { color: #196141; font-weight: 600; }
+        table { font-size: 0.92rem; }
+        /* Módulos recolhíveis (<details>/<summary>) — reduz o scroll:
+           mostra uma lista compacta e expande só o módulo escolhido. */
+        details.mod-detalhe > summary {
+            cursor: pointer; padding: 12px 16px; list-style: none;
+            border-bottom: 1px solid #eee;
+        }
+        details.mod-detalhe > summary::-webkit-details-marker { display: none; }
+        details.mod-detalhe > summary::before { content: "▸"; color: #0d4a30; margin-right: 8px; }
+        details.mod-detalhe[open] > summary::before { content: "▾"; }
+        details.mod-detalhe[open] > summary { background: #faf9ff; }
+    </style>
+</head>
+<body>
+    {% include '_navbar.html' %}
+
+    <div class="container" id="conteudo" tabindex="-1">
+        {# Sugestões de tipo de avaliação (não restritivas — o campo continua livre) #}
+        <datalist id="tipos-avaliacao">
+            <option value="Teste"></option>
+            <option value="Trabalho"></option>
+            <option value="Projeto"></option>
+            <option value="Apresentação"></option>
+            <option value="Exame"></option>
+            <option value="Ficha de avaliação"></option>
+            <option value="Prova oral"></option>
+            <option value="Avaliação contínua"></option>
+        </datalist>
+        <div class="mb-4">
+            {% if papel == 'professor' %}
+              <h1 class="h3 titulo-pagina mb-1">Área do Professor</h1>
+              <p class="text-muted mb-0">Gestão dos seus módulos.</p>
+            {% else %}
+              <h1 class="h3 titulo-pagina mb-1">Administração</h1>
+              <p class="text-muted mb-0">Área do coordenador — gestão do curso.</p>
+            {% endif %}
+        </div>
+
+        <!-- Mensagens (erros / sucesso) -->
+        {% with mensagens = get_flashed_messages(with_categories=true) %}
+          {% if mensagens %}
+            {% for categoria, texto in mensagens %}
+              <div class="alert {% if categoria == 'ok' %}alert-success{% else %}alert-danger{% endif %} py-2">
+                {{ texto }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <!-- Calendário de overview: aulas + avaliações dos módulos visíveis
+             (âmbito: o professor vê os seus; o coordenador vê o curso todo). -->
+        {% if dados.eventos %}
+        <div class="card">
+            <div class="card-header bg-white">
+                <i class="bi bi-calendar3 me-1"></i><strong>Calendário</strong>
+                <small class="text-muted ms-1">aulas e avaliações {% if papel == 'professor' %}dos seus módulos{% else %}do curso{% endif %}</small>
+            </div>
+            <div class="card-body">
+                <div id="calendario"></div>
+
+                <hr class="my-3">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div>
+                        <a href="{{ url_for('cronograma_ics') }}" class="btn btn-sm btn-outline-success">
+                            <i class="bi bi-calendar-plus me-1"></i>Adicionar ao meu telemóvel (.ics)
+                        </a>
+                        <div class="small text-muted mt-1">
+                            Descarrega e abre o ficheiro para juntar as aulas ao calendário do
+                            telemóvel ou do computador. Ou aponta a câmara ao QR ao lado.
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <img src="{{ url_for('qr_cronograma') }}" alt="QR para adicionar o cronograma ao calendário"
+                             width="104" height="104" style="border:1px solid #e2e8e5; border-radius:6px; padding:3px; background:#fff;">
+                        <div class="small text-muted">Aponta a câmara</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# Criar e importar módulos é reservado ao COORDENADOR (não aos
+           professores, que só gerem os seus módulos já existentes). #}
+        {% if papel == 'coordenador' %}
+        <!-- Adicionar módulo -->
+        <div class="card">
+            <div class="card-header bg-white"><i class="bi bi-plus-square me-1"></i><strong>Adicionar módulo</strong></div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin_adicionar_modulo') }}" class="row g-2">
+                    <div class="col-md-4">
+                        <label class="form-label mb-0">Nome</label>
+                        <input name="nome" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-0">UFCD</label>
+                        <input name="ufcd" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-0">Professor</label>
+                        <input name="professor" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-0">Estado</label>
+                        <select name="estado" class="form-select form-select-sm">
+                            <option value="planeado" selected>Planeado</option>
+                            <option value="em curso">Em curso</option>
+                            <option value="concluido">Concluído</option>
+                        </select>
+                    </div>
+                    {# Módulo novo -> ainda não foi dada nenhuma aula (horas dadas = 0).
+                       As horas dadas registam-se depois, na edição, à medida que o curso avança. #}
+                    <input type="hidden" name="horas_dadas" value="0">
+                    <div class="col-md-3">
+                        <label class="form-label mb-0">Horas totais (previstas)</label>
+                        <input name="horas_totais" type="number" min="0" class="form-control form-control-sm" value="0">
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button class="btn btn-primary btn-sm w-100">Adicionar módulo</button>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>As <strong>datas das aulas</strong>
+                            definem-se a seguir, no <em>cronograma</em> de cada módulo: indica o número
+                            de aulas e escolhe cada data num calendário.
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Importar cronograma em massa (CSV) -->
+        <div class="card">
+            <div class="card-header bg-white"><i class="bi bi-filetype-csv me-1"></i><strong>Importar módulos por CSV</strong></div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">
+                    Carregue vários módulos de uma vez a partir de um ficheiro CSV
+                    (exportado do Excel/Google Sheets). Colunas:
+                    <code>nome,professor,horas_totais,horas_dadas,estado</code> e,
+                    opcionais, <code>ufcd</code> e <code>datas</code>
+                    (dias de aula separados por <code>;</code>). Módulos com nome
+                    já existente são saltados.
+                </p>
+                <form method="POST" action="{{ url_for('admin_importar_csv') }}"
+                      enctype="multipart/form-data" class="row g-2">
+                    <div class="col-md-8">
+                        <input type="file" name="csv" accept=".csv" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button class="btn btn-outline-primary btn-sm w-100"><i class="bi bi-upload me-1"></i>Importar módulos</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <h5 class="mt-4 mb-3 text-forave">
+          <i class="bi bi-journal-text me-1"></i>
+          {% if papel == 'professor' %}Os meus módulos{% else %}Módulos{% endif %}
+          ({{ dados.modulos|length }})
+        </h5>
+
+        {% if not dados.modulos %}
+          {% if papel == 'professor' %}
+            <p class="text-muted">Ainda não há módulos atribuídos a si. Fale com o coordenador.</p>
+          {% else %}
+            <p class="text-muted">Ainda não há módulos. Adicione o primeiro acima.</p>
+          {% endif %}
+        {% endif %}
+
+        {% for m in dados.modulos %}
+        <details class="card mod-detalhe">
+            <summary>
+                <span class="mod-titulo">{{ m.nome }}</span>
+                {% if m.ufcd %}<small class="text-muted">({{ m.ufcd }})</small>{% endif %}
+                <span class="badge bg-secondary ms-2">{{ m.estado or '—' }}</span>
+                <span class="text-muted small ms-2">{{ m.horas_dadas }}/{{ m.horas_totais }}h · {{ m.percentagem }}%</span>
+            </summary>
+            <div class="card-body">
+                <!-- Editar módulo (campos pré-preenchidos; o nome é a chave e não muda) -->
+                <h6>Editar módulo</h6>
+                <form method="POST" action="{{ url_for('admin_editar_modulo') }}" class="row g-2 mb-3">
+                    <input type="hidden" name="nome" value="{{ m.nome }}">
+                    <div class="col-md-3">
+                        <label class="form-label mb-0 small">Professor</label>
+                        <input name="professor" class="form-control form-control-sm" value="{{ m.professor }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-0 small">UFCD</label>
+                        <input name="ufcd" class="form-control form-control-sm" value="{{ m.ufcd }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-0 small">Estado</label>
+                        <select name="estado" class="form-select form-select-sm">
+                            <option value="planeado" {% if m.estado == 'planeado' %}selected{% endif %}>Planeado</option>
+                            <option value="em curso" {% if m.estado == 'em curso' %}selected{% endif %}>Em curso</option>
+                            <option value="concluido" {% if m.estado == 'concluido' %}selected{% endif %}>Concluído</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-0 small">Horas dadas</label>
+                        <input class="form-control form-control-sm bg-light" value="{{ m.horas_dadas }}" disabled
+                               title="Calculado: soma das aulas marcadas como dadas no cronograma (abaixo).">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-0 small">Horas totais</label>
+                        <input name="horas_totais" type="number" min="0" class="form-control form-control-sm" value="{{ m.horas_totais }}">
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-primary btn-sm">Guardar alterações</button>
+                    </div>
+                </form>
+
+                <!-- Cronograma (aulas): cada aula tem data + horas + "dada" (✓).
+                     As horas dadas do módulo são a soma das aulas marcadas. -->
+                <h6>Cronograma (aulas)</h6>
+                {% if m.datas %}
+                  <p class="mb-1 small">Dias de aula agendados: {{ m.datas | join(', ') }}</p>
+                {% else %}
+                  <p class="text-muted mb-1 small">Ainda sem aulas agendadas.</p>
+                {% endif %}
+                <p class="mb-2 small text-muted">
+                  <i class="bi bi-info-circle me-1"></i>Cada aula tem <strong>data</strong>,
+                  <strong>horas</strong> e uma marca <strong>“dada”</strong> (✓). As
+                  <strong>horas dadas</strong> do módulo são a soma das aulas assinaladas como
+                  dadas — atualizam-se sozinhas. Atual:
+                  <strong>{{ m.horas_dadas }}</strong> de {{ m.horas_totais }}h dadas
+                  ({{ m.horas_restantes }}h em falta).
+                </p>
+
+                <!-- Editor: indica o Nº de aulas -> N linhas (data em calendário +
+                     horas + checkbox "dada"), pré-preenchidas com as sessões atuais.
+                     Ao guardar, o JS ordena por data e envia tudo em JSON. -->
+                <div class="cronograma-editor mb-3">
+                    <div class="row g-2 mb-2 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label mb-0 small">Nº de aulas</label>
+                            <input type="number" min="0" max="60" class="form-control form-control-sm num-aulas" value="{{ m.sessoes|length }}">
+                        </div>
+                        <div class="col-md-5 d-flex align-items-end">
+                            <button type="button" class="btn btn-outline-secondary btn-sm gerar-datas">Gerar / atualizar campos</button>
+                        </div>
+                    </div>
+                    <form method="POST" action="{{ url_for('admin_definir_datas') }}" class="form-datas">
+                        <input type="hidden" name="nome" value="{{ m.nome }}">
+                        <input type="hidden" name="sessoes" class="sessoes-hidden">
+                        <div class="row g-2 campos-datas" data-sessoes='{{ m.sessoes | tojson }}'></div>
+                        <button class="btn btn-primary btn-sm mt-2">Guardar cronograma</button>
+                    </form>
+                </div>
+
+                <!-- Alterar UMA data pontualmente e avisar a turma -->
+                <p class="mb-1 small text-muted">Alterar uma data e avisar a turma:</p>
+                <form method="POST" action="{{ url_for('admin_registar_alteracao') }}" class="row g-2 mb-3">
+                    <input type="hidden" name="modulo" value="{{ m.nome }}">
+                    <div class="col-md-3">
+                      <label class="form-label mb-0 small">Data a alterar</label>
+                      {% if m.datas %}
+                        <select name="data_original" class="form-select form-select-sm">
+                          {% for d in m.datas %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+                        </select>
+                      {% else %}
+                        <input type="date" name="data_original" class="form-control form-control-sm">
+                      {% endif %}
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label mb-0 small">Nova data</label>
+                      <input type="date" name="data_nova" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label mb-0 small">Motivo</label>
+                      <input name="motivo" class="form-control form-control-sm" placeholder="ex: feriado, professor doente">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-center">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="avisar" id="avisar_{{ loop.index }}">
+                        <label class="form-check-label small" for="avisar_{{ loop.index }}">Avisar turma</label>
+                      </div>
+                    </div>
+                    <div class="col-md-1 d-flex align-items-center">
+                      <button class="btn btn-warning btn-sm w-100">Mudar</button>
+                    </div>
+                </form>
+
+                <!-- Avaliações do módulo (editar/remover) -->
+                <h6>Avaliações</h6>
+                {% if m.avaliacoes %}
+                  {% for av in m.avaliacoes %}
+                    <details class="border rounded mb-2 p-2">
+                      <summary class="small">
+                        <span class="badge bg-secondary" title="Momento de avaliação nº {{ av.indice + 1 }}">{{ av.indice + 1 }}</span>
+                        {{ av.data }} — {{ av.tipo }} — <strong>{{ av.descricao }}</strong>
+                        (peso: {{ av.peso if av.peso is not none else '—' }})
+                      </summary>
+                      <form method="POST" action="{{ url_for('admin_editar_avaliacao') }}" class="row g-2 mt-2">
+                        <input type="hidden" name="modulo" value="{{ m.nome }}">
+                        <input type="hidden" name="indice" value="{{ av.indice }}">
+                        {% set avid = m.nome|replace(' ','_') ~ '_' ~ av.indice %}
+                        <div class="col-md-2"><label class="form-label mb-0 small">Data</label><input type="date" name="data" class="form-control form-control-sm" value="{{ av.data|data_iso }}"></div>
+                        <div class="col-md-2"><label class="form-label mb-0 small">Tipo</label><input name="tipo" list="tipos-avaliacao" class="form-control form-control-sm" value="{{ av.tipo }}" title="Natureza da avaliação (ex: Teste, Projeto, Trabalho)"></div>
+                        <div class="col-md-3"><label class="form-label mb-0 small">Descrição</label><input name="descricao" class="form-control form-control-sm" value="{{ av.descricao }}" required title="Nome que identifica esta avaliação (ex: Teste 1 — variáveis e ciclos)"></div>
+                        <div class="col-md-2"><label class="form-label mb-0 small">Objectivo</label><input name="objectivo" class="form-control form-control-sm" value="{{ av.objectivo }}" title="O que se pretende avaliar (competências/conteúdos)"></div>
+                        <div class="col-md-2"><label class="form-label mb-0 small">Entregáveis</label><input name="deliverables" class="form-control form-control-sm" value="{{ av.deliverables }}" title="O que o aluno tem de entregar (ex: ficheiro .py, relatório)"></div>
+                        <div class="col-md-1"><label class="form-label mb-0 small">Peso %</label><input name="peso" type="number" min="0" max="100" class="form-control form-control-sm" value="{{ av.peso if av.peso is not none else '' }}" title="Peso desta avaliação na nota final do módulo (0 a 100)"></div>
+                        <div class="col-12 d-flex align-items-center gap-3 flex-wrap">
+                          <button class="btn btn-primary btn-sm">Guardar</button>
+                          <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" name="avisar" id="av_ed_{{ avid }}">
+                            <label class="form-check-label small" for="av_ed_{{ avid }}">Avisar a turma por email (se tiver data)</label>
+                          </div>
+                        </div>
+                      </form>
+                      <form method="POST" action="{{ url_for('admin_remover_avaliacao') }}" class="mt-1"
+                            data-confirmar="Remover esta avaliação e as suas notas?">
+                        <input type="hidden" name="modulo" value="{{ m.nome }}">
+                        <input type="hidden" name="indice" value="{{ av.indice }}">
+                        <button class="btn btn-outline-danger btn-sm">Remover avaliação</button>
+                      </form>
+                    </details>
+                  {% endfor %}
+                {% else %}
+                  <p class="text-muted">Sem avaliações ainda.</p>
+                {% endif %}
+
+                <p class="mb-1 small text-muted">
+                  Nova avaliação — só a <strong>Descrição</strong> é obrigatória.
+                  O <strong>Peso</strong> é a fatia (%) desta avaliação na nota final do módulo.
+                </p>
+                <form method="POST" action="{{ url_for('admin_adicionar_avaliacao') }}" class="row g-2 mb-3">
+                    <input type="hidden" name="modulo" value="{{ m.nome }}">
+                    <div class="col-md-2"><label class="form-label mb-0 small">Data</label>
+                        <input type="date" name="data" class="form-control form-control-sm" title="Data prevista da avaliação"></div>
+                    <div class="col-md-2"><label class="form-label mb-0 small">Tipo</label>
+                        <input name="tipo" list="tipos-avaliacao" class="form-control form-control-sm" placeholder="Teste, Projeto…" title="Natureza da avaliação (ex: Teste, Projeto, Trabalho)"></div>
+                    <div class="col-md-3"><label class="form-label mb-0 small">Descrição <span class="text-danger">*</span></label>
+                        <input name="descricao" class="form-control form-control-sm" placeholder="ex: Teste 1 — variáveis e ciclos" required title="Nome que identifica esta avaliação"></div>
+                    <div class="col-md-2"><label class="form-label mb-0 small">Objectivo</label>
+                        <input name="objectivo" class="form-control form-control-sm" placeholder="o que se avalia" title="O que se pretende avaliar (competências/conteúdos)"></div>
+                    <div class="col-md-2"><label class="form-label mb-0 small">Entregáveis</label>
+                        <input name="deliverables" class="form-control form-control-sm" placeholder="o que o aluno entrega" title="O que o aluno tem de entregar (ex: ficheiro .py, relatório)"></div>
+                    <div class="col-md-1"><label class="form-label mb-0 small">Peso %</label>
+                        <input name="peso" type="number" min="0" max="100" class="form-control form-control-sm" placeholder="%" title="Peso na nota final do módulo (0 a 100)"></div>
+                    <div class="col-12 d-flex align-items-center gap-3 flex-wrap">
+                        <button class="btn btn-outline-primary btn-sm">+ Adicionar avaliação</button>
+                        <div class="form-check mb-0">
+                          <input class="form-check-input" type="checkbox" name="avisar" id="av_add_{{ m.nome|replace(' ','_') }}">
+                          <label class="form-check-label small" for="av_add_{{ m.nome|replace(' ','_') }}">Avisar a turma por email (se tiver data)</label>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Lançar notas (uma sub-tabela por avaliação) -->
+                <h6>Notas</h6>
+                {% if m.avaliacoes and m.alunos %}
+                  {% for av in m.avaliacoes %}
+                    <form method="POST" action="{{ url_for('admin_lancar_notas') }}" class="mb-3 border rounded p-2">
+                        <input type="hidden" name="modulo" value="{{ m.nome }}">
+                        <input type="hidden" name="indice" value="{{ av.indice }}">
+                        <div class="mb-1"><strong>{{ av.descricao }}</strong> <small class="text-muted">(avaliação {{ av.indice + 1 }})</small></div>
+                        <table class="table table-sm table-bordered mb-2">
+                            <thead><tr><th>Aluno</th><th style="width:120px">Nota (0-20)</th></tr></thead>
+                            <tbody>
+                            {% for aluno in m.alunos %}
+                              <tr>
+                                <td>{{ aluno.nome }}</td>
+                                <td>
+                                  <input type="number" min="0" max="20" step="1"
+                                         name="nota__{{ aluno.email }}"
+                                         value="{{ aluno.notas[av.indice] if aluno.notas[av.indice] is not none else '' }}"
+                                         class="form-control form-control-sm">
+                                </td>
+                              </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="avisar_notas" id="avisar_notas_{{ m.nome|replace(' ','_') }}_{{ av.indice }}">
+                            <label class="form-check-label small" for="avisar_notas_{{ m.nome|replace(' ','_') }}_{{ av.indice }}">
+                                Avisar cada aluno da sua nota por email (individual)
+                            </label>
+                        </div>
+                        <button class="btn btn-success btn-sm">Guardar notas</button>
+                    </form>
+                  {% endfor %}
+                {% else %}
+                  <p class="text-muted">Para lançar notas é preciso ter avaliações e alunos inscritos neste módulo.</p>
+                {% endif %}
+
+                <!-- Notas finais (média ponderada) -->
+                {% if m.alunos %}
+                  <h6>Notas finais (UFCD)</h6>
+                  <table class="table table-sm w-auto">
+                    <tbody>
+                    {% for aluno in m.alunos %}
+                      <tr>
+                        <td>{{ aluno.nome }}</td>
+                        <td><strong>{{ aluno.nota_final if aluno.nota_final is not none else '—' }}</strong></td>
+                      </tr>
+                    {% endfor %}
+                    </tbody>
+                  </table>
+                {% endif %}
+
+                {# Remover o módulo (com avaliações e notas) — reservado ao coordenador #}
+                {% if papel == 'coordenador' %}
+                <hr class="my-2">
+                <form method="POST" action="{{ url_for('admin_remover_modulo') }}"
+                      data-confirmar="Remover o módulo &quot;{{ m.nome }}&quot; e TODAS as suas avaliações e notas? Esta ação é irreversível.">
+                    <input type="hidden" name="nome" value="{{ m.nome }}">
+                    <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash me-1"></i>Remover módulo</button>
+                </form>
+                {% endif %}
+            </div>
+        </details>
+        {% endfor %}
+
+        {# Gestão de PROFESSORES (só coordenador): dá email a um professor e
+           associa-o a módulos -> esse email passa a entrar como professor e
+           a ver só os seus módulos. É o que torna o papel utilizável na web. #}
+        {% if papel == 'coordenador' %}
+        <h5 class="mt-4 mb-2 text-forave"><i class="bi bi-person-video3 me-1"></i>Professores</h5>
+        <p class="text-muted small mb-2">
+            Crie professores com email e associe-os a módulos. Cada professor,
+            ao entrar no site com o seu email, passa a ver/gerir só os seus módulos.
+            O <strong>email é a chave</strong> (liga o login ao papel) e não se edita —
+            para o corrigir, remova e volte a criar.
+        </p>
+        <div class="card">
+            <div class="card-body">
+                {% if dados.professores %}
+                  {% for p in dados.professores %}
+                    <details class="border rounded mb-2 p-2">
+                      <summary class="small">
+                        <strong>{{ p.nome }}</strong> — {{ p.email }}
+                        <span class="text-muted">({{ p.modulos | join(', ') if p.modulos else 'sem módulos' }})</span>
+                      </summary>
+                      <form method="POST" action="{{ url_for('admin_editar_professor') }}" class="row g-2 mt-2">
+                        <input type="hidden" name="email" value="{{ p.email }}">
+                        <div class="col-md-4">
+                          <label class="form-label mb-0 small">Nome</label>
+                          <input name="nome" class="form-control form-control-sm" value="{{ p.nome }}" required>
+                        </div>
+                        <div class="col-md-3">
+                          <label class="form-label mb-0 small">Telefone</label>
+                          <input name="telefone" class="form-control form-control-sm" value="{{ p.telefone }}">
+                        </div>
+                        <div class="col-md-5">
+                          <label class="form-label mb-0 small">Módulos que gere</label>
+                          <div class="border rounded p-2" style="max-height:110px; overflow:auto;">
+                            {% for m in dados.modulos %}
+                              {% set cid = 'pe_' ~ loop.index ~ '_' ~ (p.email | replace('@','_') | replace('.','_')) %}
+                              <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="modulos" value="{{ m.nome }}"
+                                       id="{{ cid }}" {% if m.nome in p.modulos %}checked{% endif %}>
+                                <label class="form-check-label small" for="{{ cid }}">{{ m.nome }}</label>
+                              </div>
+                            {% endfor %}
+                          </div>
+                        </div>
+                        <div class="col-12">
+                          <button class="btn btn-primary btn-sm">Guardar</button>
+                        </div>
+                      </form>
+                      <form method="POST" action="{{ url_for('admin_remover_professor') }}" class="mt-1"
+                            data-confirmar="Remover o professor {{ p.email }}?">
+                        <input type="hidden" name="email" value="{{ p.email }}">
+                        <button class="btn btn-outline-danger btn-sm">Remover professor</button>
+                      </form>
+                    </details>
+                  {% endfor %}
+                {% else %}
+                  <p class="text-muted">Ainda não há professores registados.</p>
+                {% endif %}
+
+                <form method="POST" action="{{ url_for('admin_adicionar_professor') }}" class="row g-2">
+                    <div class="col-md-3">
+                        <label class="form-label mb-0 small">Nome</label>
+                        <input name="nome" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-0 small">Email</label>
+                        <input name="email" type="email" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-0 small">Telefone</label>
+                        <input name="telefone" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label mb-0 small">Módulos que gere</label>
+                        <div class="border rounded p-2" style="max-height:120px; overflow:auto;">
+                          {% if dados.modulos %}
+                            {% for m in dados.modulos %}
+                              <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="modulos" value="{{ m.nome }}" id="profmod_{{ loop.index }}">
+                                <label class="form-check-label small" for="profmod_{{ loop.index }}">{{ m.nome }}</label>
+                              </div>
+                            {% endfor %}
+                          {% else %}
+                            <span class="text-muted small">Sem módulos ainda.</span>
+                          {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-outline-primary btn-sm">+ Adicionar professor</button>
+                    </div>
+                </form>
+
+                <hr class="my-3">
+                <form method="POST" action="{{ url_for('admin_importar_csv_professores') }}"
+                      enctype="multipart/form-data" class="row g-2">
+                    <div class="col-12">
+                        <label class="form-label mb-0 small"><i class="bi bi-filetype-csv me-1"></i>… ou importar vários professores por CSV
+                            <span class="text-muted">(colunas: <code>nome,email,telefone,modulos</code> — módulos separados por <code>;</code>)</span></label>
+                    </div>
+                    <div class="col-md-8"><input type="file" name="csv" accept=".csv" class="form-control form-control-sm" required></div>
+                    <div class="col-md-4 d-flex align-items-end"><button class="btn btn-outline-primary btn-sm w-100">Importar professores (CSV)</button></div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        {# Gestão de FORMANDOS (só coordenador): inscrever alunos e o direito
+           ao apagamento (RGPD) — remover apaga o aluno E as suas notas. #}
+        {% if papel == 'coordenador' %}
+        <h5 class="mt-4 mb-2 text-forave"><i class="bi bi-people me-1"></i>Formandos</h5>
+        <p class="text-muted small mb-2">
+            Inscreva os alunos (nome + email) e associe-os a módulos. A remoção
+            é o <strong>direito ao apagamento (RGPD)</strong>: apaga o aluno e as suas notas.
+            O <strong>email é a chave</strong> (a que estão associadas as notas) e não se
+            edita — para o corrigir, remova e volte a inscrever.
+        </p>
+        <div class="card">
+            <div class="card-body">
+                {% if dados.formandos %}
+                  {% for f in dados.formandos %}
+                    <details class="border rounded mb-2 p-2">
+                      <summary class="small">
+                        <strong>{{ f.nome }}</strong> — {{ f.email }}
+                        <span class="text-muted">({{ f.modulos | join(', ') if f.modulos else 'sem módulos' }})</span>
+                      </summary>
+                      <form method="POST" action="{{ url_for('admin_editar_formando') }}" class="row g-2 mt-2">
+                        <input type="hidden" name="email" value="{{ f.email }}">
+                        <div class="col-md-5">
+                          <label class="form-label mb-0 small">Nome</label>
+                          <input name="nome" class="form-control form-control-sm" value="{{ f.nome }}" required>
+                        </div>
+                        <div class="col-md-7">
+                          <label class="form-label mb-0 small">Módulos inscritos</label>
+                          <div class="border rounded p-2" style="max-height:110px; overflow:auto;">
+                            {% for m in dados.modulos %}
+                              {% set cid = 'fe_' ~ loop.index ~ '_' ~ (f.email | replace('@','_') | replace('.','_')) %}
+                              <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="modulos" value="{{ m.nome }}"
+                                       id="{{ cid }}" {% if m.nome in f.modulos %}checked{% endif %}>
+                                <label class="form-check-label small" for="{{ cid }}">{{ m.nome }}</label>
+                              </div>
+                            {% endfor %}
+                          </div>
+                        </div>
+                        <div class="col-12">
+                          <button class="btn btn-primary btn-sm">Guardar</button>
+                        </div>
+                      </form>
+                      <form method="POST" action="{{ url_for('admin_remover_formando') }}" class="mt-1"
+                            data-confirmar="Remover {{ f.email }} e as suas notas? Esta ação é irreversível (RGPD).">
+                        <input type="hidden" name="email" value="{{ f.email }}">
+                        <button class="btn btn-outline-danger btn-sm">Remover (RGPD)</button>
+                      </form>
+                    </details>
+                  {% endfor %}
+                {% else %}
+                  <p class="text-muted">Ainda não há formandos inscritos.</p>
+                {% endif %}
+
+                <form method="POST" action="{{ url_for('admin_adicionar_formando') }}" class="row g-2">
+                    <div class="col-md-4">
+                        <label class="form-label mb-0 small">Nome</label>
+                        <input name="nome" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label mb-0 small">Email</label>
+                        <input name="email" type="email" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label mb-0 small">Módulos inscritos</label>
+                        <div class="border rounded p-2" style="max-height:120px; overflow:auto;">
+                          {% if dados.modulos %}
+                            {% for m in dados.modulos %}
+                              <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="modulos" value="{{ m.nome }}" id="formando_mod_{{ loop.index }}">
+                                <label class="form-check-label small" for="formando_mod_{{ loop.index }}">{{ m.nome }}</label>
+                              </div>
+                            {% endfor %}
+                          {% else %}
+                            <span class="text-muted small">Sem módulos ainda.</span>
+                          {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-outline-primary btn-sm">+ Inscrever formando</button>
+                    </div>
+                </form>
+
+                <hr class="my-3">
+                <form method="POST" action="{{ url_for('admin_importar_csv_formandos') }}"
+                      enctype="multipart/form-data" class="row g-2">
+                    <div class="col-12">
+                        <label class="form-label mb-0 small"><i class="bi bi-filetype-csv me-1"></i>… ou importar vários formandos por CSV
+                            <span class="text-muted">(colunas: <code>nome,email,modulos</code> — módulos separados por <code>;</code>)</span></label>
+                    </div>
+                    <div class="col-md-8"><input type="file" name="csv" accept=".csv" class="form-control form-control-sm" required></div>
+                    <div class="col-md-4 d-flex align-items-end"><button class="btn btn-outline-primary btn-sm w-100">Importar formandos (CSV)</button></div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        {# Registo de alterações (auditoria): visão de coordenação — inclui
+           detalhe de notas de vários módulos, por isso só o coordenador o vê. #}
+        {% if papel == 'coordenador' %}
+        <!-- Registo de alterações: quem fez o quê e quando (auditoria interna) -->
+        <div class="d-flex justify-content-between align-items-center mt-4 mb-2 flex-wrap gap-2">
+            <h5 class="mb-0 text-forave"><i class="bi bi-clock-history me-1"></i>Registo de alterações</h5>
+            <a href="{{ url_for('admin_auditoria_csv') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-download me-1"></i>Descarregar registo completo (CSV)
+            </a>
+        </div>
+        <p class="text-muted small mb-2">
+            Cada alteração feita nesta área fica registada (quem, o quê e quando).
+            É um histórico só de leitura — no ecrã mostram-se as {{ auditoria|length }} mais
+            recentes; o <strong>registo completo</strong> obtém-se pelo botão de descarregar (CSV),
+            para arquivo e auditoria externa.
+        </p>
+        <div class="card">
+            <div class="card-body">
+                {% if auditoria %}
+                  <div class="table-responsive"><table class="table table-sm table-striped mb-0">
+                    <thead>
+                      <tr><th style="width:150px">Data/Hora</th><th>Autor</th><th>Acção</th><th>Detalhe</th></tr>
+                    </thead>
+                    <tbody>
+                    {% for e in auditoria %}
+                      <tr>
+                        <td class="text-nowrap">{{ e.data_hora }}</td>
+                        <td>{{ e.autor }}</td>
+                        <td>{{ e.accao }}</td>
+                        <td class="small">{{ e.detalhe }}</td>
+                      </tr>
+                    {% endfor %}
+                    </tbody>
+                  </table></div>
+                {% else %}
+                  <p class="text-muted mb-0">Ainda não há registos. Assim que fizer uma alteração aqui, ela aparece nesta lista.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <footer class="rodape-app">
+            Área de gestão · FORAVE — CET em Gestão de Informação e Ciência de Dados
+        </footer>
+    </div>
+
+    <!-- Editor do cronograma: Nº de aulas -> N linhas (data em calendário +
+         horas + checkbox "dada"), pré-preenchidas com as sessões atuais. Ao
+         submeter, ordena por data e escreve tudo em JSON no campo escondido. -->
+    <script>
+    (function () {
+        function ddmmParaIso(d) {
+            var p = (d || '').split('/');
+            if (p.length !== 3) return '';
+            return p[2] + '-' + p[1].padStart(2, '0') + '-' + p[0].padStart(2, '0');
+        }
+        function isoParaDdmm(s) {
+            var p = (s || '').split('-');
+            if (p.length !== 3) return '';
+            return p[2] + '/' + p[1] + '/' + p[0];
+        }
+
+        document.querySelectorAll('.cronograma-editor').forEach(function (bloco) {
+            var num = bloco.querySelector('.num-aulas');
+            var botao = bloco.querySelector('.gerar-datas');
+            var campos = bloco.querySelector('.campos-datas');
+            var hidden = bloco.querySelector('.sessoes-hidden');
+            var form = bloco.querySelector('.form-datas');
+            var atuais = [];
+            try { atuais = JSON.parse(campos.dataset.sessoes || '[]'); } catch (e) { atuais = []; }
+
+            function desenhar(n) {
+                campos.innerHTML = '';
+                for (var i = 0; i < n; i++) {
+                    var s = atuais[i] || {};
+                    var col = document.createElement('div');
+                    col.className = 'col-md-4';
+                    col.innerHTML =
+                        '<label class="form-label mb-0 small text-muted">Aula ' + (i + 1) + '</label>' +
+                        '<div class="input-group input-group-sm mb-1">' +
+                        '  <input type="date" class="form-control sess-data" title="Data da aula">' +
+                        '  <input type="number" min="0" step="0.5" class="form-control sess-horas" ' +
+                        '         style="max-width:4.5rem" placeholder="h" title="Horas desta aula">' +
+                        '  <span class="input-group-text" title="Marcar quando a aula foi dada">' +
+                        '    <input type="checkbox" class="form-check-input mt-0 sess-real" aria-label="Aula dada">' +
+                        '  </span>' +
+                        '</div>';
+                    campos.appendChild(col);
+                    if (s.data) col.querySelector('.sess-data').value = ddmmParaIso(s.data);
+                    if (s.horas !== undefined && s.horas !== null && s.horas !== 0)
+                        col.querySelector('.sess-horas').value = s.horas;
+                    col.querySelector('.sess-real').checked = !!s.realizada;
+                }
+            }
+
+            // Desenha logo com o nº atual de aulas (mostra as sessões existentes)
+            desenhar(parseInt(num.value, 10) || 0);
+            botao.addEventListener('click', function () {
+                desenhar(parseInt(num.value, 10) || 0);
+            });
+
+            // Ao guardar: recolhe cada linha preenchida (com data), ordena por
+            // data (cronologicamente) e escreve em JSON no campo escondido.
+            form.addEventListener('submit', function () {
+                var linhas = [];
+                campos.querySelectorAll('.col-md-4').forEach(function (col) {
+                    var iso = col.querySelector('.sess-data').value;
+                    if (!iso) return;
+                    linhas.push({
+                        iso: iso,
+                        data: isoParaDdmm(iso),
+                        horas: parseFloat(col.querySelector('.sess-horas').value) || 0,
+                        realizada: col.querySelector('.sess-real').checked
+                    });
+                });
+                linhas.sort(function (a, b) { return a.iso < b.iso ? -1 : (a.iso > b.iso ? 1 : 0); });
+                linhas.forEach(function (l) { delete l.iso; });
+                hidden.value = JSON.stringify(linhas);
+            });
+        });
+    })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='forave.js') }}"></script>
+    <script>
+        // Eventos (aulas + avaliações) dos módulos que este utilizador vê.
+        window.CAL_EVENTOS = {{ dados.eventos|tojson }};
+    </script>
+    <script src="{{ url_for('static', filename='calendario.js') }}"></script>
+</body>
+</html>

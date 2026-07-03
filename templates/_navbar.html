@@ -1,0 +1,51 @@
+{# ============================================================
+   _navbar.html — Barra de navegação partilhada (páginas autenticadas)
+   ============================================================
+   Incluída no topo do dashboard, admin e área do aluno com {% include %}.
+   Centraliza a navegação (antes eram 3 cabeçalhos diferentes), destaca a
+   página atual (request.endpoint) e mostra links conforme o papel na sessão.
+   ============================================================ #}
+<a href="#conteudo" class="visually-hidden-focusable skip-link">Saltar para o conteúdo principal</a>
+<nav class="navbar navbar-expand-md navbar-dark app-navbar mb-4">
+    <div class="container-fluid" style="max-width: 1200px;">
+        <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('cronograma') }}">
+            <img src="{{ url_for('static', filename='forave-logo.png') }}" alt="FORAVE">
+            <span>Cronograma FORAVE</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navPrincipal" aria-controls="navPrincipal"
+                aria-expanded="false" aria-label="Abrir ou fechar o menu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navPrincipal">
+            <ul class="navbar-nav me-auto mb-2 mb-md-0">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'cronograma' %}active{% endif %}"
+                       href="{{ url_for('cronograma') }}"><i class="bi bi-calendar3 me-1"></i>Cronograma</a>
+                </li>
+                {% if session.papel in ['coordenador', 'professor'] %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'admin' %}active{% endif %}"
+                       href="{{ url_for('admin') }}"><i class="bi bi-gear me-1"></i>{% if session.papel == 'professor' %}Os meus módulos{% else %}Administração{% endif %}</a>
+                </li>
+                {% endif %}
+                {% if session.papel == 'aluno' %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'area_aluno' %}active{% endif %}"
+                       href="{{ url_for('area_aluno') }}"><i class="bi bi-house-door me-1"></i>A minha área</a>
+                </li>
+                {% endif %}
+            </ul>
+            <ul class="navbar-nav align-items-md-center">
+                {% if session.email %}
+                <li class="nav-item">
+                    <span class="navbar-text me-md-3 small"><i class="bi bi-person-circle me-1"></i>{{ session.email }}</span>
+                </li>
+                <li class="nav-item">
+                    <a class="btn btn-light btn-sm" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right me-1"></i>Sair</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repor password — Cronograma FORAVE</title>
+    <meta name="theme-color" content="#196141">
+    <link rel="icon" href="/static/icon-192.png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='forave.css') }}">
+    <style>
+        body { background-color: #f5f6fa; }
+        .caixa-login { max-width: 420px; margin: 60px auto; }
+        .titulo-app {
+            background: linear-gradient(135deg, #196141 0%, #0d4a30 100%);
+            color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="caixa-login">
+        <div class="titulo-app">
+            <img src="{{ url_for('static', filename='forave-logo.png') }}" class="brand-logo mb-2" alt="FORAVE">
+            <h3 class="mb-1">Repor password</h3>
+            <p class="mb-0">Cronograma FORAVE</p>
+        </div>
+        <div class="card"><div class="card-body">
+
+            <!-- Mensagens (erros / sucesso) -->
+            {% with mensagens = get_flashed_messages(with_categories=true) %}
+              {% if mensagens %}
+                {% for categoria, texto in mensagens %}
+                  <div class="alert {% if categoria == 'ok' %}alert-success{% else %}alert-danger{% endif %} py-2">
+                    {{ texto }}
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            <p class="text-muted">
+                Escreve o teu email. Se tiveres conta, enviamos-te um link
+                para definires uma nova password.
+            </p>
+
+            <form method="POST" action="{{ url_for('recuperar') }}">
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                        <input type="email" name="email" class="form-control" placeholder="o.teu.email@forave.org" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send me-1"></i>Enviar link de reposição</button>
+            </form>
+
+            <hr>
+            <p class="text-center mb-0">
+                <a href="{{ url_for('login') }}">← Voltar ao login</a>
+            </p>
+        </div></div>
+    </div>
+
+    <footer class="rodape-app">
+        FORAVE — CET em Gestão de Informação e Ciência de Dados
+    </footer>
+    <script src="{{ url_for('static', filename='forave.js') }}"></script>
+</body>
+</html>

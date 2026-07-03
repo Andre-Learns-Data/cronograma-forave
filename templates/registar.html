@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registar — Cronograma FORAVE</title>
+    <meta name="theme-color" content="#196141">
+    <link rel="icon" href="/static/icon-192.png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='forave.css') }}">
+    <style>
+        body { background-color: #f5f6fa; }
+        .caixa-login { max-width: 420px; margin: 60px auto; }
+        .titulo-app {
+            background: linear-gradient(135deg, #196141 0%, #0d4a30 100%);
+            color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;
+        }
+    </style>
+</head>
+<body>
+    {# O perfil vem do link ("Registar" aluno ou coordenador) e só muda o
+       VISUAL/AJUDA. Quem pode registar-se é decidido no servidor (formando
+       do curso OU email em COORDENADOR_EMAILS). #}
+    {% set perfil = request.args.get('perfil', '') %}
+    <div class="caixa-login">
+        <div class="titulo-app">
+            <img src="{{ url_for('static', filename='forave-logo.png') }}" class="brand-logo mb-2" alt="FORAVE">
+            <h3 class="mb-1">Criar Conta</h3>
+            <p class="mb-0">Cronograma FORAVE{% if perfil == 'coordenador' %} — área do coordenador{% elif perfil == 'professor' %} — área do professor{% elif perfil == 'aluno' %} — área do aluno{% endif %}</p>
+        </div>
+        <div class="card"><div class="card-body">
+
+            {% with mensagens = get_flashed_messages(with_categories=true) %}
+              {% if mensagens %}
+                {% for categoria, texto in mensagens %}
+                  <div class="alert {% if categoria == 'ok' %}alert-success{% else %}alert-danger{% endif %} py-2">
+                    {{ texto }}
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            {% if perfil == 'coordenador' %}
+              <p class="text-muted small">
+                O coordenador regista a conta com o seu <strong>email de coordenação</strong>.
+                O perfil é reconhecido automaticamente pelo email.
+              </p>
+            {% elif perfil == 'professor' %}
+              <p class="text-muted small">
+                O professor regista a conta com o <strong>email</strong> que o coordenador
+                lhe associou, passando a ver/gerir apenas o(s) módulo(s) atribuído(s).
+              </p>
+            {% else %}
+              <p class="text-muted small">
+                Usa o teu <strong>email do curso</strong>. Só emails que já estão na
+                lista de formandos (ou de coordenação) podem criar conta.
+              </p>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('registar', perfil=perfil) }}">
+                <div class="mb-3">
+                    <label class="form-label">Email
+                        <i class="bi bi-info-circle text-muted ms-1" role="button" tabindex="0"
+                           data-bs-toggle="tooltip" data-bs-placement="right"
+                           title="O acesso é feito por email. Por predefinição utiliza-se o email institucional; o coordenador pode autorizar outros endereços."></i>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                        <input type="email" name="email" class="form-control" placeholder="email@exemplo.pt" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Password (mín. 6 caracteres)</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                        <input type="password" name="password" id="password" class="form-control" required>
+                        <button class="btn btn-outline-secondary" type="button"
+                                onclick="alternarPassword('password', this)" aria-label="Mostrar ou ocultar a password">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Repetir password</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                        <input type="password" name="password2" id="password2" class="form-control" required>
+                        <button class="btn btn-outline-secondary" type="button"
+                                onclick="alternarPassword('password2', this)" aria-label="Mostrar ou ocultar a password">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-person-plus me-1"></i>Criar conta</button>
+            </form>
+
+            <hr>
+            <p class="text-center mb-0">
+                Já tens conta?
+                <a href="{{ url_for('login', perfil=perfil) }}">Entrar</a>
+            </p>
+            <p class="text-center mt-2 mb-0">
+                <a href="{{ url_for('landing') }}">← Voltar ao início</a>
+            </p>
+        </div></div>
+    </div>
+
+    <footer class="rodape-app">
+        FORAVE — CET em Gestão de Informação e Ciência de Dados
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='forave.js') }}"></script>
+</body>
+</html>

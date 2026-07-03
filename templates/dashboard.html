@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Gestor de Cronograma FORAVE</title>
+    <!-- PWA: torna a página instalável no telemóvel -->
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#196141">
+    <link rel="icon" href="/static/icon-192.png">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='forave.css') }}">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <style>
+        body { padding-top: 20px; background-color: #f5f6fa; }
+        .container-fluid { max-width: 1200px; }
+        .card-header { font-weight: bold; }
+        .chart-container { position: relative; height: 340px; width: 100%; }
+        .titulo-app {
+            background: linear-gradient(135deg, #196141 0%, #0d4a30 100%);
+            color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;
+        }
+        .stat-card { text-align: center; }
+        .stat-card .icone-stat { font-size: 1.5rem; color: #a3cd3b; line-height: 1; margin-bottom: 4px; }
+        .stat-card .valor { font-size: 2rem; font-weight: bold; color: #196141; }
+        .stat-card .rotulo { color: #6c757d; font-size: 0.9rem; }
+        .modulo-card { margin-bottom: 15px; }
+        .badge-em-curso { background-color: #0d6efd; }
+        .badge-concluido { background-color: #198754; }
+        .badge-pendente { background-color: #6c757d; }
+    </style>
+</head>
+<body>
+    {% include '_navbar.html' %}
+    <div class="container-fluid" id="conteudo" tabindex="-1">
+
+        <div class="mb-4">
+            <h1 class="h3 titulo-pagina mb-1">Cockpit do curso</h1>
+            <p class="text-muted mb-0">Estado real do curso — módulos, progresso e avaliações.</p>
+        </div>
+
+        <!-- Cartões de resumo -->
+        <div class="row g-3 mb-4" id="resumoCards">
+            <div class="col-6 col-md-3"><div class="card stat-card h-100"><div class="card-body">
+                <div class="icone-stat"><i class="bi bi-collection"></i></div>
+                <div class="valor" id="statModulos">—</div><div class="rotulo">Módulos</div>
+            </div></div></div>
+            <div class="col-6 col-md-3"><div class="card stat-card h-100"><div class="card-body">
+                <div class="icone-stat"><i class="bi bi-clock-history"></i></div>
+                <div class="valor" id="statHoras">—</div><div class="rotulo">Horas dadas / totais</div>
+            </div></div></div>
+            <div class="col-6 col-md-3"><div class="card stat-card h-100"><div class="card-body">
+                <div class="icone-stat"><i class="bi bi-clipboard-check"></i></div>
+                <div class="valor" id="statAvaliacoes">—</div><div class="rotulo">Avaliações</div>
+            </div></div></div>
+            <div class="col-6 col-md-3"><div class="card stat-card h-100"><div class="card-body">
+                <div class="icone-stat"><i class="bi bi-graph-up-arrow"></i></div>
+                <div class="valor" id="statProgresso">—</div><div class="rotulo">Progresso global</div>
+            </div></div></div>
+        </div>
+
+        <!-- Botões de exportação: PDF + calendário (.ics) -->
+        <div class="row mb-4"><div class="col-md-12">
+            <div class="card"><div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span class="text-muted"><i class="bi bi-download me-1 text-forave"></i>Exporta o relatório em PDF, ou adiciona as aulas ao teu calendário.</span>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{{ url_for('cronograma_ics') }}" class="btn btn-outline-primary"><i class="bi bi-calendar-plus me-1"></i>Adicionar ao calendário (.ics)</a>
+                    <button id="downloadPdf" class="btn btn-success"><i class="bi bi-file-earmark-pdf me-1"></i>Relatório PDF</button>
+                </div>
+            </div></div>
+        </div></div>
+
+        <div class="row">
+            <!-- Coluna principal: módulos + gráfico -->
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header"><i class="bi bi-bar-chart-line me-1"></i>Progresso dos módulos</div>
+                    <div class="card-body">
+                        <div class="chart-container"><canvas id="progressoChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header"><i class="bi bi-journal-text me-1"></i>Módulos e Progresso</div>
+                    <div class="card-body">
+                        <div id="listaModulos"><p class="text-center text-muted"><span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>A carregar módulos…</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coluna lateral: insights -->
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header"><i class="bi bi-speedometer2 me-1"></i>Indicadores</div>
+                    <div class="card-body">
+                        <div id="insightsContent"><p class="text-muted"><span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>A carregar indicadores…</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="rodape-app">
+            Gestor de Cronograma · FORAVE — CET em Gestão de Informação e Ciência de Dados
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE_URL = window.location.origin;
+        const PALETA = ['#196141', '#0d4a30', '#f5576c', '#00b894', '#fdcb6e', '#0984e3', '#e17055'];
+
+        function classeBadge(estado) {
+            if (estado === 'concluido') return 'badge-concluido';
+            if (estado === 'em curso') return 'badge-em-curso';
+            return 'badge-pendente';
+        }
+
+        function corBarra(estado) {
+            if (estado === 'concluido') return 'bg-success';
+            if (estado === 'em curso') return 'bg-primary';
+            return 'bg-secondary';
+        }
+
+        // Mostra/esconde o QR de um módulo (fica escondido até ser pedido,
+        // para não encher o ecrã com uma "parede de QRs").
+        function alternarQr(idx) {
+            const el = document.getElementById('qr-' + idx);
+            if (el) el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+        }
+
+        // --- Módulos: cartões com barra de progresso ---
+        async function carregarModulos() {
+            const resposta = await fetch(`${API_BASE_URL}/api/schedule`);
+            const modulos = await resposta.json();
+
+            // Cartões de resumo (totais)
+            let horasDadas = 0, horasTotais = 0, avaliacoes = 0;
+            for (let i = 0; i < modulos.length; i++) {
+                horasDadas += modulos[i].horas_dadas;
+                horasTotais += modulos[i].horas_totais;
+                avaliacoes += modulos[i].num_avaliacoes;
+            }
+            const progressoGlobal = horasTotais > 0 ? Math.round((horasDadas / horasTotais) * 100) : 0;
+            document.getElementById('statModulos').textContent = modulos.length;
+            document.getElementById('statHoras').textContent = horasDadas + ' / ' + horasTotais;
+            document.getElementById('statAvaliacoes').textContent = avaliacoes;
+            document.getElementById('statProgresso').textContent = progressoGlobal + '%';
+
+            // Lista de módulos
+            const container = document.getElementById('listaModulos');
+            if (modulos.length === 0) {
+                container.innerHTML = '<p class="text-center text-muted">Ainda não há módulos registados. ' +
+                    'O coordenador pode criá-los, ou importar de CSV, na ' +
+                    '<a href="/admin">área de Administração</a>.</p>';
+            } else {
+                let html = '';
+                modulos.forEach((m, idx) => {
+                    const ufcd = m.ufcd ? `<span class="badge bg-dark me-1">UFCD ${m.ufcd}</span>` : '';
+                    const temDatas = m.datas.length > 0;
+                    const datas = temDatas ? m.datas.join(', ') : 'sem datas';
+                    const nomeUrl = encodeURIComponent(m.nome);
+                    // Botão .ics (no próprio dispositivo) + QR (escondido até pedir,
+                    // para levar as aulas do módulo para outro telemóvel). Só quando
+                    // o módulo tem datas — senão o .ics sairia sem eventos.
+                    const calendario = temDatas ? `
+                            <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
+                                <a href="/modulo.ics?nome=${nomeUrl}" class="btn btn-sm btn-outline-primary"><i class="bi bi-calendar-plus me-1"></i>Adicionar ao calendário</a>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="alternarQr(${idx})"><i class="bi bi-qr-code me-1"></i>QR</button>
+                            </div>
+                            <div id="qr-${idx}" class="text-center mt-2" style="display:none;">
+                                <img src="/modulo/qr.png?nome=${nomeUrl}" alt="QR do módulo ${m.nome}" width="160" height="160">
+                                <div class="text-muted small mt-1">
+                                    <i class="bi bi-phone me-1"></i>Aponta a câmara do telemóvel para juntares as aulas deste módulo ao teu calendário.
+                                </div>
+                            </div>` : '';
+                    html += `
+                        <div class="modulo-card border rounded p-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>${ufcd}<strong>${m.nome}</strong>
+                                    <span class="badge ${classeBadge(m.estado)} ms-1">${m.estado}</span></div>
+                                <small class="text-muted">Prof. ${m.professor}</small>
+                            </div>
+                            <div class="progress mt-2" style="height: 20px;">
+                                <div class="progress-bar ${corBarra(m.estado)}" role="progressbar"
+                                     style="width: ${m.percentagem}%;">${m.percentagem}%</div>
+                            </div>
+                            <small class="text-muted">
+                                ${m.horas_dadas}/${m.horas_totais}h · ${m.horas_restantes}h em falta ·
+                                ${m.num_avaliacoes} avaliação(ões) · Datas: ${datas}
+                            </small>
+                            ${calendario}
+                        </div>`;
+                });
+                container.innerHTML = html;
+            }
+
+            desenharGraficoProgresso(modulos);
+        }
+
+        // --- Gráfico: progresso (% concluído) por módulo ---
+        // Responde à pergunta útil do coordenador — "quais os módulos atrasados?".
+        // Barras horizontais ordenadas do MENOS concluído para o mais, para os
+        // que precisam de atenção ficarem no topo. Cor por estado do módulo.
+        function desenharGraficoProgresso(modulos) {
+            const ordenados = modulos.slice().sort((a, b) => a.percentagem - b.percentagem);
+            // Etiqueta em duas linhas: nome do módulo e, por baixo, (Professor).
+            // (O Chart.js desenha um array de strings como várias linhas.)
+            const nomes = ordenados.map(m => m.professor ? [m.nome, `(${m.professor})`] : m.nome);
+            const valores = ordenados.map(m => m.percentagem);
+            const corPorEstado = e =>
+                e === 'concluido' ? '#0d4a30' : (e === 'em curso' ? '#196141' : '#adb5bd');
+            const cores = ordenados.map(m => corPorEstado(m.estado));
+
+            const ctx = document.getElementById('progressoChart').getContext('2d');
+            if (window.graficoProg) window.graficoProg.destroy();
+            window.graficoProg = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: nomes, datasets: [{
+                    label: 'Concluído (%)', data: valores, backgroundColor: cores
+                }] },
+                options: {
+                    indexAxis: 'y',   // barras horizontais
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { x: { beginAtZero: true, max: 100,
+                        ticks: { callback: v => v + '%' },
+                        title: { display: true, text: '% concluído (horas dadas)' } } },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: c => c.parsed.x + '% concluído' } }
+                    }
+                }
+            });
+        }
+
+        // --- Indicadores ---
+        async function carregarInsights() {
+            const resposta = await fetch(`${API_BASE_URL}/api/insights`);
+            const ins = await resposta.json();
+            const alvo = document.getElementById('insightsContent');
+
+            let html = '<h6>Estado dos módulos</h6><ul>';
+            const estados = ins.estado_modulos || {};
+            const chaves = Object.keys(estados);
+            if (chaves.length === 0) { html += '<li class="text-muted">sem módulos</li>'; }
+            chaves.forEach(e => { html += `<li>${e}: ${estados[e]}</li>`; });
+            html += '</ul>';
+
+            html += '<h6 class="mt-3">Alterações por módulo</h6><ul>';
+            if (ins.alteracoes_por_modulo && ins.alteracoes_por_modulo.length > 0) {
+                ins.alteracoes_por_modulo.forEach(par => { html += `<li>${par[0]}: ${par[1]}</li>`; });
+            } else {
+                html += '<li class="text-muted">nenhuma alteração registada</li>';
+            }
+            html += '</ul>';
+
+            html += '<h6 class="mt-3">Carga por professor</h6><ul>';
+            if (ins.professor_workload && ins.professor_workload.length > 0) {
+                ins.professor_workload.forEach(par => { html += `<li>${par[0]}: ${par[1]} módulo(s)</li>`; });
+            } else {
+                html += '<li class="text-muted">sem professores</li>';
+            }
+            html += '</ul>';
+
+            alvo.innerHTML = html;
+        }
+
+        // --- Exportar PDF ---
+        document.getElementById('downloadPdf').addEventListener('click', async () => {
+            const botao = document.getElementById('downloadPdf');
+            const original = botao.innerHTML;
+            botao.disabled = true;
+            botao.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>A gerar…';
+            try {
+                const resposta = await fetch(`${API_BASE_URL}/api/export_pdf`, { method: 'POST' });
+                if (resposta.ok) {
+                    const blob = await resposta.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = 'relatorio_cronograma.pdf';
+                    document.body.appendChild(a); a.click();
+                    window.URL.revokeObjectURL(url); a.remove();
+                } else { alert('Erro ao gerar o PDF.'); }
+            } catch (e) {
+                alert('Erro de rede ao gerar o PDF.');
+            } finally {
+                botao.disabled = false;
+                botao.innerHTML = original;
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            carregarModulos();
+            carregarInsights();
+        });
+
+        // PWA: registar o service worker (torna a página instalável + offline básico)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
+    </script>
+</body>
+</html>
