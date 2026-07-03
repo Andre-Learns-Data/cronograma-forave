@@ -723,6 +723,15 @@ mensagem de entrega.</p>
 <p class="admonition-title">Resultado esperado</p>
 <p>Menu por opções, sobre os mesmos dados da versão web.</p>
 </div>
+<div class="admonition comentario">
+<p class="admonition-title">Cuidado ao sair (sincronização com a cloud)</p>
+<p>A opção <strong><code>S — Sincronizar com Google Sheets</code></strong> e a saída (<strong><code>0</code></strong>) escrevem
+os dados <strong>locais por cima</strong> do Google Sheet. Por isso, ao <strong>sair</strong>, o programa
+<strong>pergunta primeiro</strong> se quer sincronizar (por defeito <strong>não</strong> — basta carregar
+<strong>Enter</strong>). Assim, uma demonstração no terminal <strong>nunca</strong> altera, sem querer, os
+dados do site online. <em>(Só se liga ao Sheet quem tiver o <code>credentials.json</code>; a
+cópia de demonstração/<code>.exe</code> corre com dados locais e não toca na cloud.)</em></p>
+</div>
 </li>
 <li>
 <p><strong>Executável (.exe):</strong> descarregar o <strong><code>GestorCronograma-v1.0.zip</code></strong> da <strong>Release

@@ -499,6 +499,14 @@ O sistema envia avisos por email em três casos: **nota individual** ao aluno,
     !!! resultado "Resultado esperado"
         Menu por opções, sobre os mesmos dados da versão web.
 
+    !!! comentario "Cuidado ao sair (sincronização com a cloud)"
+        A opção **`S — Sincronizar com Google Sheets`** e a saída (**`0`**) escrevem
+        os dados **locais por cima** do Google Sheet. Por isso, ao **sair**, o programa
+        **pergunta primeiro** se quer sincronizar (por defeito **não** — basta carregar
+        **Enter**). Assim, uma demonstração no terminal **nunca** altera, sem querer, os
+        dados do site online. *(Só se liga ao Sheet quem tiver o `credentials.json`; a
+        cópia de demonstração/`.exe` corre com dados locais e não toca na cloud.)*
+
 2. **Executável (.exe):** descarregar o **`GestorCronograma-v1.0.zip`** da **Release
    v1.0** (na página do GitHub → "Releases"), extrair a pasta, e **duplo-clique** em
    `GestorCronograma.exe`. *(Para quem quiser reconstruir a partir do código, ver

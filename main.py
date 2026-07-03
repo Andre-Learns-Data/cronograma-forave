@@ -694,9 +694,21 @@ def main():
         elif opcao.upper() == "S":
             opcao_sincronizar(gestor, gsheets)
         elif opcao == "0":
+            # Sincronizar ao sair passou a ser OPCIONAL e CONFIRMADO.
+            # Sincronizar escreve os dados LOCAIS por cima do Google Sheet; se
+            # os dados locais estiverem desatualizados, isso apagaria os dados
+            # bons na cloud. Por isso perguntamos primeiro, com "não" por
+            # defeito (basta carregar Enter para sair sem tocar na cloud).
             if gsheets is not None and gsheets.conectado:
-                print("\n  A sincronizar antes de sair...")
-                gsheets.sincronizar_tudo(gestor)
+                resposta = input(
+                    "\n  Sincronizar os dados locais para o Google Sheets antes de sair?\n"
+                    "  ATENÇÃO: escreve os dados locais POR CIMA da cloud. [s/N]: "
+                ).strip().lower()
+                if resposta == "s":
+                    print("  A sincronizar...")
+                    gsheets.sincronizar_tudo(gestor)
+                else:
+                    print("  Sem sincronizar — o Google Sheet ficou como estava.")
             limpar_ecra()
             print("\n  Programa terminado. Até à próxima!\n")
             break
