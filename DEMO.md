@@ -499,10 +499,19 @@ O sistema envia avisos por email em três casos: **nota individual** ao aluno,
     !!! resultado "Resultado esperado"
         Menu por opções, sobre os mesmos dados da versão web.
 
-2. **Executável (.exe):** ver `INSTRUCOES_EXE.md`.
+2. **Executável (.exe):** descarregar o **`GestorCronograma-v1.0.zip`** da **Release
+   v1.0** (na página do GitHub → "Releases"), extrair a pasta, e **duplo-clique** em
+   `GestorCronograma.exe`. *(Para quem quiser reconstruir a partir do código, ver
+   `INSTRUCOES_EXE.md`.)*
 
     !!! resultado "Resultado esperado"
-        A aplicação de terminal corre sem Python instalado.
+        A aplicação de terminal abre **já com a demo carregada** (módulos,
+        professores e alunos), **sem precisar de Python instalado** — corre offline.
+
+    !!! bastidores "Nos bastidores"
+        O `.exe` é gerado com **PyInstaller** (`build_exe.ps1` + `cronograma.spec`):
+        empacota o programa de terminal (`main.py`) e as bibliotecas numa pasta; os
+        dados de demonstração vão ao lado, em `dados/`.
 
 3. **Site alojado:** abrir o URL do alojamento e iniciar sessão como coordenador;
    importar `demo_modulos.csv`, `demo_formandos.csv` e `demo_professores.csv`.

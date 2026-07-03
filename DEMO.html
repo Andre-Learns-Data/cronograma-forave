@@ -725,10 +725,20 @@ mensagem de entrega.</p>
 </div>
 </li>
 <li>
-<p><strong>Executável (.exe):</strong> ver <code>INSTRUCOES_EXE.md</code>.</p>
+<p><strong>Executável (.exe):</strong> descarregar o <strong><code>GestorCronograma-v1.0.zip</code></strong> da <strong>Release
+   v1.0</strong> (na página do GitHub → "Releases"), extrair a pasta, e <strong>duplo-clique</strong> em
+   <code>GestorCronograma.exe</code>. <em>(Para quem quiser reconstruir a partir do código, ver
+   <code>INSTRUCOES_EXE.md</code>.)</em></p>
 <div class="adm-resultado">
 <p class="admonition-title">Resultado esperado</p>
-<p>A aplicação de terminal corre sem Python instalado.</p>
+<p>A aplicação de terminal abre <strong>já com a demo carregada</strong> (módulos,
+professores e alunos), <strong>sem precisar de Python instalado</strong> — corre offline.</p>
+</div>
+<div class="adm-bastidores">
+<p class="admonition-title">Nos bastidores</p>
+<p>O <code>.exe</code> é gerado com <strong>PyInstaller</strong> (<code>build_exe.ps1</code> + <code>cronograma.spec</code>):
+empacota o programa de terminal (<code>main.py</code>) e as bibliotecas numa pasta; os
+dados de demonstração vão ao lado, em <code>dados/</code>.</p>
 </div>
 </li>
 <li>
