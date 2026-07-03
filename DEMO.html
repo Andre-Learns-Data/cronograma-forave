@@ -136,7 +136,13 @@ credenciais que acompanham a entrega (indicadas à parte, nunca no código).</p>
 <li><a href="#3-perfil-professor">3. Perfil: Professor</a></li>
 <li><a href="#4-perfil-aluno">4. Perfil: Aluno</a></li>
 <li><a href="#5-notificacoes-por-email">5. Notificações por email</a></li>
-<li><a href="#6-outras-interfaces-e-canais">6. Outras interfaces e canais</a></li>
+<li><a href="#6-outras-interfaces-e-canais">6. Outras interfaces e canais</a><ul>
+<li><a href="#61-terminal-python-mainpy">6.1 Terminal (python main.py)</a></li>
+<li><a href="#62-executavel-exe-o-terminal-sem-precisar-de-python">6.2 Executável (.exe) — o terminal sem precisar de Python</a></li>
+<li><a href="#63-site-alojado">6.3 Site alojado</a></li>
+<li><a href="#64-instalacao-como-aplicacao-pwa">6.4 Instalação como aplicação (PWA)</a></li>
+</ul>
+</li>
 <li><a href="#7-reposicao-de-password">7. Reposição de password</a></li>
 <li><a href="#8-estrutura-do-codigo-para-consulta">8. Estrutura do código (para consulta)</a></li>
 <li><a href="#9-alinhamento-com-a-materia-de-python-avancado">9. Alinhamento com a matéria de Python Avançado</a></li>
@@ -213,7 +219,8 @@ grupo de trabalho).</p>
 </div>
 </li>
 <li>
-<p>Localizar a secção <strong>"Adicionar o cronograma ao calendário"</strong>.</p>
+<p>Localizar a secção <strong>"Leva o cronograma para o teu calendário"</strong> (botão
+   <strong>"Adicionar ao calendário (.ics)"</strong>).</p>
 <div class="adm-resultado">
 <p class="admonition-title">Resultado esperado</p>
 <p>Botão de download <code>.ics</code> e um código QR do cronograma.</p>
@@ -716,50 +723,126 @@ mensagem de entrega.</p>
 </blockquote>
 <hr />
 <h2 id="6-outras-interfaces-e-canais">6. Outras interfaces e canais</h2>
+<h3 id="61-terminal-python-mainpy">6.1 Terminal (<code>python main.py</code>)</h3>
+<p>O terminal expõe <strong>as mesmas operações</strong> da versão web, sobre <strong>os mesmos dados</strong>
+(os ficheiros JSON em <code>dados/</code>), mas em menu de texto — a prova de que a regra de
+negócio é independente da "casca" que a mostra.</p>
 <ol>
 <li>
-<p><strong>Terminal:</strong> executar <code>python main.py</code>.</p>
+<p>Arrancar: <code>python main.py</code>.</p>
 <div class="adm-resultado">
 <p class="admonition-title">Resultado esperado</p>
-<p>Menu por opções, sobre os mesmos dados da versão web.</p>
+<p>Ecrã de arranque ("Dados: 3 módulos, 3 professores, 4 formandos") e depois o
+<strong>menu</strong> com as opções 1–14, <code>S</code> e <code>0</code>, e o estado no topo
+(<code>[Google Sheets: OFF] [Email: OFF]</code> na cópia de demonstração).</p>
+</div>
+</li>
+</ol>
+<p>O menu cobre todo o ciclo: <strong>1</strong> ver cronograma · <strong>2</strong> módulo · <strong>3–4</strong> professores ·
+<strong>5–6</strong> formandos · <strong>7</strong> registar alteração · <strong>8</strong> histórico · <strong>9</strong> registar horas ·
+<strong>10</strong> importar CSV · <strong>11</strong> avaliação · <strong>12</strong> remover formando (RGPD) · <strong>13</strong> lançar
+notas · <strong>14</strong> gerar QR · <strong>S</strong> sincronizar · <strong>0</strong> sair. Abaixo percorrem-se as opções
+que <strong>só o terminal</strong> tem (ou que aqui se veem melhor).</p>
+<ol start="2">
+<li>
+<p><strong>Opção 1 — Ver cronograma.</strong></p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Os 3 módulos de demonstração, cada um com horas dadas/totais, percentagem e estado.</p>
+</div>
+</li>
+<li>
+<p><strong>Opção 9 — Registar horas leccionadas</strong> <em>(exclusivo do terminal)</em>. Escolher o módulo
+   pelo número (o menu mostra o progresso ao lado, ex. <code>Python Avançado — 25/50h</code>) e
+   indicar as horas a somar.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>As horas somam-se e reaparece o total (ex. <code>30h registadas. Total: 30/50h (60.0%)</code>);
+ao atingir o total surge "Módulo concluído!".</p>
 </div>
 <div class="admonition comentario">
-<p class="admonition-title">Cuidado ao sair (sincronização com a cloud)</p>
-<p>A opção <strong><code>S — Sincronizar com Google Sheets</code></strong> e a saída (<strong><code>0</code></strong>) escrevem
-os dados <strong>locais por cima</strong> do Google Sheet. Por isso, ao <strong>sair</strong>, o programa
-<strong>pergunta primeiro</strong> se quer sincronizar (por defeito <strong>não</strong> — basta carregar
-<strong>Enter</strong>). Assim, uma demonstração no terminal <strong>nunca</strong> altera, sem querer, os
-dados do site online. <em>(Só se liga ao Sheet quem tiver o <code>credentials.json</code>; a
-cópia de demonstração/<code>.exe</code> corre com dados locais e não toca na cloud.)</em></p>
+<p class="admonition-title">Web vs terminal</p>
+<p>Na web as horas vêm das <strong>sessões</strong> do cronograma (data + horas + "aula dada");
+no terminal há também este registo <strong>manual e rápido</strong> — ambos atualizam o mesmo módulo.</p>
 </div>
 </li>
 <li>
-<p><strong>Executável (.exe):</strong> descarregar o <strong><code>GestorCronograma-v1.0.zip</code></strong> da <strong>Release
-   v1.0</strong> (na página do GitHub → "Releases"), extrair a pasta, e <strong>duplo-clique</strong> em
-   <code>GestorCronograma.exe</code>. <em>(Para quem quiser reconstruir a partir do código, ver
-   <code>INSTRUCOES_EXE.md</code>.)</em></p>
+<p><strong>Opção 7 — Registar alteração e escolher o canal</strong> <em>(exclusivo do terminal)</em>. Depois
+   de descrever a alteração a um módulo, o programa pergunta <strong>como notificar</strong>:
+   <code>1. Consola · 2. Ficheiro · 3. Email · 4. Todos · 5. Não enviar</code>.</p>
 <div class="adm-resultado">
 <p class="admonition-title">Resultado esperado</p>
-<p>A aplicação de terminal abre <strong>já com a demo carregada</strong> (módulos,
-professores e alunos), <strong>sem precisar de Python instalado</strong> — corre offline.</p>
+<p>Consola → a mensagem aparece no ecrã; Ficheiro → é escrita em <code>dados/notificacoes.txt</code>;
+Email → enviada aos destinatários (se configurado); Todos → faz os três.</p>
 </div>
-<div class="adm-bastidores">
-<p class="admonition-title">Nos bastidores</p>
-<p>O <code>.exe</code> é gerado com <strong>PyInstaller</strong> (<code>build_exe.ps1</code> + <code>cronograma.spec</code>):
-empacota o programa de terminal (<code>main.py</code>) e as bibliotecas numa pasta; os
-dados de demonstração vão ao lado, em <code>dados/</code>.</p>
+<div class="adm-porque">
+<p class="admonition-title">Porquê mostrar isto</p>
+<p>É o mesmo objeto de <strong>Notificação</strong> com vários <strong>canais</strong> — "uma lógica, várias saídas"
+aplicada às notificações.</p>
 </div>
 </li>
 <li>
-<p><strong>Site alojado:</strong> abrir o URL do alojamento e iniciar sessão como coordenador;
-   importar <code>demo_modulos.csv</code>, <code>demo_formandos.csv</code> e <code>demo_professores.csv</code>.</p>
+<p><strong>Opção 8 — Ver histórico de alterações.</strong> Lista as alterações já registadas.</p>
+</li>
+<li>
+<p><strong>Opção 14 — Gerar QR code</strong> <em>(exclusivo do terminal)</em>. Pede o URL (sugere
+   <code>http://127.0.0.1:5000</code>) e o nome do ficheiro, e grava um <strong>PNG</strong> com o QR.</p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p><code>QR code criado: qr_cronograma.png</code> — um artefacto físico (cartaz/slide) que abre
+o cronograma ao apontar a câmara.</p>
+</div>
+</li>
+<li>
+<p><strong>Sair (opção <code>0</code>).</strong></p>
+<div class="admonition comentario">
+<p class="admonition-title">Cuidado ao sair (sincronização com a cloud)</p>
+<p>A opção <strong><code>S</code></strong> e a saída (<strong><code>0</code></strong>) podem escrever os dados <strong>locais por cima</strong> do
+Google Sheet. Por isso, ao <strong>sair</strong>, o programa <strong>pergunta primeiro</strong> se quer
+sincronizar (por defeito <strong>não</strong> — basta <strong>Enter</strong>). Assim, uma demonstração no
+terminal <strong>nunca</strong> altera, sem querer, os dados do site. <em>(Só se liga ao Sheet quem
+tiver o <code>credentials.json</code>; a cópia de demonstração/<code>.exe</code> corre com dados locais.)</em></p>
+</div>
+</li>
+</ol>
+<h3 id="62-executavel-exe-o-terminal-sem-precisar-de-python">6.2 Executável (<code>.exe</code>) — o terminal sem precisar de Python</h3>
+<ol>
+<li>
+<p>Descarregar o <strong><code>GestorCronograma-v1.0.zip</code></strong> da <strong>Release v1.0</strong> (GitHub → "Releases"),
+   extrair a pasta e <strong>duplo-clique</strong> em <code>GestorCronograma.exe</code>. <em>(Para reconstruir a
+   partir do código, ver <code>INSTRUCOES_EXE.md</code>.)</em></p>
+<div class="adm-resultado">
+<p class="admonition-title">Resultado esperado</p>
+<p>Abre <strong>o mesmo programa de terminal</strong> do 6.1, <strong>já com a demo carregada</strong> (3 módulos,
+professores e alunos) e <strong>sem precisar de Python</strong> — corre offline.</p>
+</div>
+</li>
+<li>
+<p>Repetir ali um par de operações do 6.1 — por ex. <strong>opção 1</strong> (ver cronograma) e
+   <strong>opção 9</strong> (registar horas) — para mostrar que é <strong>funcional</strong>, não só um ecrã.</p>
+<div class="adm-bastidores">
+<p class="admonition-title">Nos bastidores</p>
+<p>O <code>.exe</code> é gerado com <strong>PyInstaller</strong> (<code>build_exe.ps1</code> + <code>cronograma.spec</code>): empacota
+o programa de terminal (<code>main.py</code>) e as bibliotecas numa pasta, com os dados de
+demonstração ao lado, em <code>dados/</code>.</p>
+</div>
+</li>
+</ol>
+<h3 id="63-site-alojado">6.3 Site alojado</h3>
+<ol>
+<li>
+<p>Abrir o URL do alojamento e iniciar sessão como coordenador; importar
+   <code>demo_modulos.csv</code>, <code>demo_formandos.csv</code> e <code>demo_professores.csv</code>.</p>
 <div class="adm-resultado">
 <p class="admonition-title">Resultado esperado</p>
 <p>Os dados ficam disponíveis no site (leitura a partir do Google Sheet).</p>
 </div>
 </li>
+</ol>
+<h3 id="64-instalacao-como-aplicacao-pwa">6.4 Instalação como aplicação (PWA)</h3>
+<ol>
 <li>
-<p><strong>Instalação como aplicação (PWA):</strong> a partir do site, instalar no dispositivo.</p>
+<p>A partir do site, instalar no dispositivo.</p>
 <div class="adm-resultado">
 <p class="admonition-title">Resultado esperado</p>
 <p>O sistema fica acessível como aplicação.</p>

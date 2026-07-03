@@ -88,7 +88,8 @@ A aplicação pode ser demonstrada em três ambientes:
         Página inicial com a identidade do curso (CET, UFCD 10794, professor e
         grupo de trabalho).
 
-2. Localizar a secção **"Adicionar o cronograma ao calendário"**.
+2. Localizar a secção **"Leva o cronograma para o teu calendário"** (botão
+   **"Adicionar ao calendário (.ics)"**).
 
     !!! resultado "Resultado esperado"
         Botão de download `.ics` e um código QR do cronograma.
@@ -494,40 +495,101 @@ O sistema envia avisos por email em três casos: **nota individual** ao aluno,
 
 ## 6. Outras interfaces e canais
 
-1. **Terminal:** executar `python main.py`.
+### 6.1 Terminal (`python main.py`)
+
+O terminal expõe **as mesmas operações** da versão web, sobre **os mesmos dados**
+(os ficheiros JSON em `dados/`), mas em menu de texto — a prova de que a regra de
+negócio é independente da "casca" que a mostra.
+
+1. Arrancar: `python main.py`.
 
     !!! resultado "Resultado esperado"
-        Menu por opções, sobre os mesmos dados da versão web.
+        Ecrã de arranque ("Dados: 3 módulos, 3 professores, 4 formandos") e depois o
+        **menu** com as opções 1–14, `S` e `0`, e o estado no topo
+        (`[Google Sheets: OFF] [Email: OFF]` na cópia de demonstração).
+
+O menu cobre todo o ciclo: **1** ver cronograma · **2** módulo · **3–4** professores ·
+**5–6** formandos · **7** registar alteração · **8** histórico · **9** registar horas ·
+**10** importar CSV · **11** avaliação · **12** remover formando (RGPD) · **13** lançar
+notas · **14** gerar QR · **S** sincronizar · **0** sair. Abaixo percorrem-se as opções
+que **só o terminal** tem (ou que aqui se veem melhor).
+
+2. **Opção 1 — Ver cronograma.**
+
+    !!! resultado "Resultado esperado"
+        Os 3 módulos de demonstração, cada um com horas dadas/totais, percentagem e estado.
+
+3. **Opção 9 — Registar horas leccionadas** *(exclusivo do terminal)*. Escolher o módulo
+   pelo número (o menu mostra o progresso ao lado, ex. `Python Avançado — 25/50h`) e
+   indicar as horas a somar.
+
+    !!! resultado "Resultado esperado"
+        As horas somam-se e reaparece o total (ex. `30h registadas. Total: 30/50h (60.0%)`);
+        ao atingir o total surge "Módulo concluído!".
+
+    !!! comentario "Web vs terminal"
+        Na web as horas vêm das **sessões** do cronograma (data + horas + "aula dada");
+        no terminal há também este registo **manual e rápido** — ambos atualizam o mesmo módulo.
+
+4. **Opção 7 — Registar alteração e escolher o canal** *(exclusivo do terminal)*. Depois
+   de descrever a alteração a um módulo, o programa pergunta **como notificar**:
+   `1. Consola · 2. Ficheiro · 3. Email · 4. Todos · 5. Não enviar`.
+
+    !!! resultado "Resultado esperado"
+        Consola → a mensagem aparece no ecrã; Ficheiro → é escrita em `dados/notificacoes.txt`;
+        Email → enviada aos destinatários (se configurado); Todos → faz os três.
+
+    !!! porque "Porquê mostrar isto"
+        É o mesmo objeto de **Notificação** com vários **canais** — "uma lógica, várias saídas"
+        aplicada às notificações.
+
+5. **Opção 8 — Ver histórico de alterações.** Lista as alterações já registadas.
+
+6. **Opção 14 — Gerar QR code** *(exclusivo do terminal)*. Pede o URL (sugere
+   `http://127.0.0.1:5000`) e o nome do ficheiro, e grava um **PNG** com o QR.
+
+    !!! resultado "Resultado esperado"
+        `QR code criado: qr_cronograma.png` — um artefacto físico (cartaz/slide) que abre
+        o cronograma ao apontar a câmara.
+
+7. **Sair (opção `0`).**
 
     !!! comentario "Cuidado ao sair (sincronização com a cloud)"
-        A opção **`S — Sincronizar com Google Sheets`** e a saída (**`0`**) escrevem
-        os dados **locais por cima** do Google Sheet. Por isso, ao **sair**, o programa
-        **pergunta primeiro** se quer sincronizar (por defeito **não** — basta carregar
-        **Enter**). Assim, uma demonstração no terminal **nunca** altera, sem querer, os
-        dados do site online. *(Só se liga ao Sheet quem tiver o `credentials.json`; a
-        cópia de demonstração/`.exe` corre com dados locais e não toca na cloud.)*
+        A opção **`S`** e a saída (**`0`**) podem escrever os dados **locais por cima** do
+        Google Sheet. Por isso, ao **sair**, o programa **pergunta primeiro** se quer
+        sincronizar (por defeito **não** — basta **Enter**). Assim, uma demonstração no
+        terminal **nunca** altera, sem querer, os dados do site. *(Só se liga ao Sheet quem
+        tiver o `credentials.json`; a cópia de demonstração/`.exe` corre com dados locais.)*
 
-2. **Executável (.exe):** descarregar o **`GestorCronograma-v1.0.zip`** da **Release
-   v1.0** (na página do GitHub → "Releases"), extrair a pasta, e **duplo-clique** em
-   `GestorCronograma.exe`. *(Para quem quiser reconstruir a partir do código, ver
-   `INSTRUCOES_EXE.md`.)*
+### 6.2 Executável (`.exe`) — o terminal sem precisar de Python
+
+1. Descarregar o **`GestorCronograma-v1.0.zip`** da **Release v1.0** (GitHub → "Releases"),
+   extrair a pasta e **duplo-clique** em `GestorCronograma.exe`. *(Para reconstruir a
+   partir do código, ver `INSTRUCOES_EXE.md`.)*
 
     !!! resultado "Resultado esperado"
-        A aplicação de terminal abre **já com a demo carregada** (módulos,
-        professores e alunos), **sem precisar de Python instalado** — corre offline.
+        Abre **o mesmo programa de terminal** do 6.1, **já com a demo carregada** (3 módulos,
+        professores e alunos) e **sem precisar de Python** — corre offline.
+
+2. Repetir ali um par de operações do 6.1 — por ex. **opção 1** (ver cronograma) e
+   **opção 9** (registar horas) — para mostrar que é **funcional**, não só um ecrã.
 
     !!! bastidores "Nos bastidores"
-        O `.exe` é gerado com **PyInstaller** (`build_exe.ps1` + `cronograma.spec`):
-        empacota o programa de terminal (`main.py`) e as bibliotecas numa pasta; os
-        dados de demonstração vão ao lado, em `dados/`.
+        O `.exe` é gerado com **PyInstaller** (`build_exe.ps1` + `cronograma.spec`): empacota
+        o programa de terminal (`main.py`) e as bibliotecas numa pasta, com os dados de
+        demonstração ao lado, em `dados/`.
 
-3. **Site alojado:** abrir o URL do alojamento e iniciar sessão como coordenador;
-   importar `demo_modulos.csv`, `demo_formandos.csv` e `demo_professores.csv`.
+### 6.3 Site alojado
+
+1. Abrir o URL do alojamento e iniciar sessão como coordenador; importar
+   `demo_modulos.csv`, `demo_formandos.csv` e `demo_professores.csv`.
 
     !!! resultado "Resultado esperado"
         Os dados ficam disponíveis no site (leitura a partir do Google Sheet).
 
-4. **Instalação como aplicação (PWA):** a partir do site, instalar no dispositivo.
+### 6.4 Instalação como aplicação (PWA)
+
+1. A partir do site, instalar no dispositivo.
 
     !!! resultado "Resultado esperado"
         O sistema fica acessível como aplicação.
