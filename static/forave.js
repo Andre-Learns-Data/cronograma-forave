@@ -242,3 +242,117 @@ document.addEventListener('DOMContentLoaded', function () {
         if (btn) btn.style.display = 'none';
     });
 })();
+
+// ------------------------------------------------------------
+// Casca de aplicação (app-shell): navegação por secções + submenus
+// ------------------------------------------------------------
+// Só corre nas páginas que têm a casca (.app-shell). A sidebar troca a
+// secção visível sem recarregar a página; os "pais" abrem submenus; no
+// telemóvel a sidebar vira gaveta.
+(function () {
+    'use strict';
+    var shell = document.querySelector('.app-shell');
+    if (!shell) return;
+
+    var sidebar = document.getElementById('appSidebar');
+    var overlay = document.querySelector('.app-overlay');
+    var secoes = document.querySelectorAll('.app-sec');
+    var topo = document.querySelectorAll('.app-navitem[data-sec]');
+    var busca = document.getElementById('buscaGlobal');
+    var buscaCaixa = busca ? busca.closest('.app-busca') : null;
+
+    // Repõe tudo o que um filtro tenha escondido (ao trocar de secção).
+    function limparFiltro() {
+        document.querySelectorAll('.app-filtravel[hidden]').forEach(function (el) { el.hidden = false; });
+        document.querySelectorAll('.app-sem-resultados').forEach(function (el) { el.hidden = true; });
+        if (busca) busca.value = '';
+    }
+
+    function ativar(sec, origem) {
+        secoes.forEach(function (s) { s.hidden = (s.dataset.sec !== sec); });
+        topo.forEach(function (it) { it.classList.toggle('active', it === origem); });
+        limparFiltro();
+        // A pesquisa só faz sentido em secções com itens filtráveis.
+        if (buscaCaixa) {
+            var temFiltro = document.querySelector('.app-sec[data-sec="' + sec + '"] .app-filtravel');
+            buscaCaixa.style.display = temFiltro ? '' : 'none';
+        }
+    }
+    function fecharGaveta() {
+        if (sidebar) sidebar.classList.remove('aberta');
+        if (overlay) overlay.classList.remove('visivel');
+    }
+
+    // Itens de topo e "pais" (com submenu).
+    topo.forEach(function (it) {
+        it.addEventListener('click', function () {
+            var grupo = it.closest('.app-navgroup');
+            if (grupo) grupo.classList.toggle('aberto');   // expande/colapsa o submenu
+            ativar(it.dataset.sec, it);
+            if (window.innerWidth <= 768 && !grupo) fecharGaveta();
+        });
+    });
+
+    // Ligações de submenu: mostram a secção e saltam para a âncora.
+    document.querySelectorAll('.app-submenu a[href^="#"]').forEach(function (a) {
+        a.addEventListener('click', function (e) {
+            var grupo = a.closest('.app-navgroup');
+            var pai = grupo ? grupo.querySelector('.app-navparent') : null;
+            ativar(a.dataset.sec, pai);
+            var alvo = document.querySelector(a.getAttribute('href'));
+            if (alvo) { e.preventDefault(); alvo.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+            if (window.innerWidth <= 768) fecharGaveta();
+        });
+    });
+
+    // Gaveta no telemóvel.
+    var burger = document.querySelector('.app-burger');
+    if (burger && sidebar) {
+        burger.addEventListener('click', function () {
+            var aberta = sidebar.classList.toggle('aberta');
+            if (overlay) overlay.classList.toggle('visivel', aberta);
+        });
+    }
+    if (overlay) overlay.addEventListener('click', fecharGaveta);
+
+    // ------------------------------------------------------------
+    // Pesquisa rápida: filtra os itens [data-busca] da secção visível.
+    // Sem acentos e sem maiúsculas, para "joao" encontrar "João".
+    // ------------------------------------------------------------
+    function semAcentos(s) {
+        return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    }
+    function filtrar() {
+        if (!busca) return;
+        var termo = semAcentos(busca.value.trim());
+        var sec = document.querySelector('.app-sec:not([hidden])');
+        if (!sec) return;
+        var itens = sec.querySelectorAll('.app-filtravel');
+        if (!itens.length) return;
+        var visiveis = 0;
+        itens.forEach(function (el) {
+            var chave = semAcentos(el.getAttribute('data-busca') || el.textContent);
+            var ok = !termo || chave.indexOf(termo) >= 0;
+            el.hidden = !ok;
+            if (ok) visiveis++;
+        });
+        // Mensagem "sem resultados" (uma por secção, criada à medida).
+        var vazio = sec.querySelector('.app-sem-resultados');
+        if (!vazio) {
+            vazio = document.createElement('p');
+            vazio.className = 'app-sem-resultados text-muted small mt-2';
+            itens[0].parentNode.appendChild(vazio);
+        }
+        vazio.textContent = 'Sem resultados para “' + busca.value.trim() + '”.';
+        vazio.hidden = !(termo && visiveis === 0);
+    }
+    if (busca) {
+        busca.addEventListener('input', filtrar);
+        busca.addEventListener('search', filtrar);   // o X de limpar dispara 'search'
+    }
+    // Estado inicial: esconde a caixa se a secção visível não tiver filtráveis.
+    if (buscaCaixa) {
+        var secIni = document.querySelector('.app-sec:not([hidden])');
+        buscaCaixa.style.display = (secIni && secIni.querySelector('.app-filtravel')) ? '' : 'none';
+    }
+})();

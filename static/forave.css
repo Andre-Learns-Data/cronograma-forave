@@ -221,3 +221,143 @@ a:focus-visible {
     padding: 8px 14px; border-radius: 8px; font-weight: 600;
     box-shadow: 0 2px 10px rgba(0, 0, 0, .2);
 }
+
+/* ============================================================
+   Casca de aplicação (app-shell): topbar + sidebar + conteúdo
+   ------------------------------------------------------------
+   Dá à área de gestão um aspeto de aplicação: barra lateral com
+   secções e submenus que trocam o conteúdo sem recarregar a
+   página. Cores da marca FORAVE (verde + dourado).
+   ============================================================ */
+.app-shell{
+  --app-green-1:#0e4a32; --app-green-2:#0a3927; --app-green:#196141;
+  --app-gold:#e9b949; --app-surface:#ffffff;
+  --app-ink:#1e2a24; --app-muted:#6b7a72; --sb-w:252px; --tb-h:56px;
+}
+
+/* Barra de topo */
+.app-topbar{
+  position:fixed; top:0; left:0; right:0; height:var(--tb-h); z-index:1030;
+  display:flex; align-items:center; gap:.75rem; padding:0 1rem;
+  background:#ffffff; border-bottom:1px solid #e4e8e6;
+}
+.app-brand{ display:flex; align-items:center; gap:.5rem; font-weight:700;
+  color:var(--app-green); text-decoration:none; font-size:1.05rem; }
+.app-brand img{ height:26px; }
+.app-topbar-user{ margin-left:auto; display:flex; align-items:center; gap:.75rem;
+  color:var(--app-muted); font-size:.88rem; }
+.app-topbar-user .email{ max-width:40vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.app-role-badge{ display:inline-flex; align-items:center; padding:.2rem .6rem;
+  border-radius:999px; background:rgba(25,97,65,.1); color:var(--app-green);
+  font-size:.78rem; font-weight:600; white-space:nowrap; }
+.app-burger{ border:0; background:transparent; font-size:1.5rem; line-height:1;
+  color:var(--app-green); padding:.1rem .4rem; border-radius:6px; cursor:pointer; display:none; }
+
+/* Barra lateral */
+.app-sidebar{
+  position:fixed; top:var(--tb-h); left:0; bottom:0; width:var(--sb-w); z-index:1025;
+  background:linear-gradient(180deg,var(--app-green-1),var(--app-green-2));
+  color:#dce7e0; padding:.8rem .6rem; overflow-y:auto;
+}
+.app-sidebar nav{ display:flex; flex-direction:column; gap:.12rem; }
+.app-navitem{
+  display:flex; align-items:center; gap:.6rem; width:100%;
+  padding:.6rem .7rem; border-radius:8px; border:0; background:transparent;
+  color:#cfe0d8; text-decoration:none; font-size:.94rem; text-align:left; cursor:pointer;
+}
+.app-navitem > .bi:first-child{ font-size:1.05rem; opacity:.92; width:1.2rem; text-align:center; }
+.app-navitem:hover{ background:rgba(255,255,255,.08); color:#ffffff; }
+.app-navitem.active{ background:rgba(255,255,255,.12); color:#ffffff;
+  box-shadow:inset 3px 0 0 var(--app-gold); }
+.app-navitem:focus-visible{ outline:2px solid var(--app-gold); outline-offset:2px; }
+.app-navparent .app-caret{ margin-left:auto; font-size:.78rem; transition:transform .18s ease; }
+.app-navgroup.aberto .app-caret{ transform:rotate(180deg); }
+.app-submenu{ display:none; flex-direction:column; margin:.1rem 0 .35rem .35rem;
+  padding-left:.6rem; border-left:1px solid rgba(255,255,255,.15); }
+.app-navgroup.aberto .app-submenu{ display:flex; }
+.app-submenu a{ padding:.4rem .6rem; border-radius:6px; color:#b7ccc1;
+  text-decoration:none; font-size:.87rem; }
+.app-submenu a:hover{ background:rgba(255,255,255,.08); color:#ffffff; }
+.app-submenu a:focus-visible{ outline:2px solid var(--app-gold); outline-offset:2px; }
+.app-burger:focus-visible{ outline:2px solid var(--app-green); outline-offset:2px; }
+
+/* Conteúdo principal */
+.app-main{
+  margin-left:var(--sb-w); margin-top:var(--tb-h);
+  padding:1.5rem clamp(1rem,3vw,2rem) 3rem; min-height:calc(100vh - var(--tb-h));
+}
+.app-sec[hidden]{ display:none; }
+.app-sec-titulo{ color:var(--app-green); font-weight:700; margin:.2rem 0 1rem; }
+
+/* Cartões de resumo (KPIs) */
+.app-kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:1rem; margin-bottom:1.6rem; }
+.app-kpi{ background:var(--app-surface); border:1px solid #e9edeb; border-radius:12px; padding:1rem 1.1rem; }
+.app-kpi .valor{ font-size:1.95rem; font-weight:700; color:var(--app-green); line-height:1; }
+.app-kpi .rotulo{ color:var(--app-muted); font-size:.85rem; margin-top:.4rem; }
+.app-kpi .bi{ float:right; font-size:1.25rem; color:var(--app-gold); }
+
+/* ---- Dashboard: grelhas de cartões ---- */
+.app-dash-grid{ display:grid; grid-template-columns:1.6fr 1fr; gap:1rem; margin-bottom:1rem; }
+.app-dash-grid-2{ grid-template-columns:1fr 1fr; }
+.app-dash-card .card-header{ font-size:.95rem; }
+.app-chart-wrap{ position:relative; height:260px; }
+@media (max-width:860px){ .app-dash-grid, .app-dash-grid-2{ grid-template-columns:1fr; } }
+
+/* ---- Próximas aulas e avaliações ---- */
+.app-proximas{ list-style:none; margin:0; padding:0; }
+.app-proximas li{ display:flex; align-items:center; gap:.7rem; padding:.55rem 0; border-bottom:1px solid #eef0ee; }
+.app-proximas li:last-child{ border-bottom:0; }
+.app-data-bloco{ flex:0 0 auto; width:44px; text-align:center; border-radius:9px; padding:.3rem 0;
+  line-height:1; background:rgba(25,97,65,.09); color:var(--forave-verde); }
+.app-data-bloco.is-aval{ background:rgba(199,127,10,.12); color:#9a6300; }
+.app-data-bloco .dia{ display:block; font-size:1.15rem; font-weight:700; }
+.app-data-bloco .mes{ display:block; font-size:.68rem; text-transform:uppercase; letter-spacing:.03em; }
+.app-prox-corpo{ flex:1 1 auto; min-width:0; }
+.app-prox-corpo .titulo{ display:block; font-weight:600; color:#1f2a24;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.app-prox-corpo .sub{ display:block; font-size:.82rem; color:var(--app-muted);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.app-etiqueta{ flex:0 0 auto; font-size:.72rem; font-weight:600; padding:.15rem .5rem;
+  border-radius:999px; }
+.app-etiqueta.is-aula{ background:rgba(25,97,65,.1); color:var(--forave-verde); }
+.app-etiqueta.is-aval{ background:rgba(199,127,10,.14); color:#9a6300; }
+
+/* ---- Precisa de atenção ---- */
+.app-alertas{ list-style:none; margin:0; padding:0; }
+.app-alertas li{ display:flex; gap:.6rem; padding:.5rem 0; border-bottom:1px solid #eef0ee; }
+.app-alertas li:last-child{ border-bottom:0; }
+.app-alertas .bi{ color:#c77f0a; font-size:1rem; margin-top:.15rem; }
+.app-alertas .sub{ display:block; font-size:.82rem; color:var(--app-muted); }
+.app-tudo-ok{ color:#1a7a3a; font-weight:600; border-bottom:0 !important; align-items:center; }
+.app-tudo-ok .bi{ color:#1a7a3a; }
+.app-vazio{ color:var(--app-muted); font-size:.9rem; }
+
+/* ---- Pesquisa rápida na barra de topo ---- */
+.app-busca{ position:relative; margin-left:1rem; flex:0 1 280px; }
+.app-busca .bi{ position:absolute; left:.65rem; top:50%; transform:translateY(-50%);
+  color:var(--app-muted); font-size:.9rem; pointer-events:none; }
+.app-busca input{ width:100%; padding:.34rem .7rem .34rem 2rem; border:1px solid #d7ded9;
+  border-radius:999px; font-size:.88rem; background:#f6f8f7; color:#1f2a24; }
+.app-busca input::placeholder{ color:#9aa5a0; }
+.app-busca input:focus{ outline:2px solid rgba(25,97,65,.3); outline-offset:1px;
+  border-color:var(--forave-verde); background:#fff; }
+.app-sem-resultados{ margin-top:.5rem; }
+@media (max-width:768px){ .app-busca{ display:none; } }
+
+/* Sobreposição (telemóvel, quando a sidebar está aberta) */
+.app-overlay{ display:none; position:fixed; inset:var(--tb-h) 0 0 0; z-index:1024; background:rgba(0,0,0,.35); }
+.app-overlay.visivel{ display:block; }
+
+/* Responsivo: em ecrãs pequenos a sidebar vira gaveta */
+@media (max-width:768px){
+  .app-burger{ display:inline-block; }
+  .app-sidebar{ transform:translateX(-100%); transition:transform .22s ease; box-shadow:2px 0 14px rgba(0,0,0,.2); }
+  .app-sidebar.aberta{ transform:translateX(0); }
+  .app-main{ margin-left:0; }
+  .app-topbar-user .email{ display:none; }
+  .app-role-badge{ display:none; }
+}
+@media (prefers-reduced-motion:reduce){
+  .app-sidebar, .app-caret{ transition:none; }
+}

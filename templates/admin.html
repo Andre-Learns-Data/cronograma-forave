@@ -30,9 +30,73 @@
     </style>
 </head>
 <body>
-    {% include '_navbar.html' %}
+    <div class="app-shell">
+      <!-- Barra de topo -->
+      <header class="app-topbar">
+        <button class="app-burger" type="button" aria-label="Abrir ou fechar o menu">&#9776;</button>
+        <a class="app-brand" href="{{ url_for('cronograma') }}">
+          <img src="{{ url_for('static', filename='forave-logo.png') }}" alt="FORAVE"><span>Cronograma FORAVE</span>
+        </a>
+        <div class="app-busca">
+          <i class="bi bi-search" aria-hidden="true"></i>
+          <input type="search" id="buscaGlobal" placeholder="Pesquisar…"
+                 aria-label="Pesquisar na secção atual" autocomplete="off">
+        </div>
+        <div class="app-topbar-user">
+          {% if session.email %}
+          <span class="app-role-badge">{% if papel == 'coordenador' %}Área do Coordenador{% elif papel == 'professor' %}Área do Professor{% else %}Área do Aluno{% endif %}</span>
+          <span class="email"><i class="bi bi-person-circle me-1"></i>{{ session.email }}</span>
+          <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right me-1"></i>Sair</a>
+          {% endif %}
+        </div>
+      </header>
 
-    <div class="container" id="conteudo" tabindex="-1">
+      <!-- Barra lateral -->
+      <aside class="app-sidebar" id="appSidebar">
+        <nav>
+          <button class="app-navitem active" type="button" data-sec="visao"><i class="bi bi-grid-1x2-fill"></i>Visão geral</button>
+
+          <div class="app-navgroup aberto">
+            <button class="app-navitem app-navparent" type="button" data-sec="modulos">
+              <i class="bi bi-journal-text"></i>{% if papel == 'professor' %}Os meus módulos{% else %}Módulos{% endif %}<i class="bi bi-chevron-down app-caret"></i>
+            </button>
+            <div class="app-submenu">
+              <a href="#lista-modulos" data-sec="modulos">Lista de módulos</a>
+              {% if papel == 'coordenador' %}
+              <a href="#add-modulo" data-sec="modulos">Adicionar módulo</a>
+              <a href="#importar-modulo" data-sec="modulos">Importar CSV</a>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if papel == 'coordenador' %}
+          <div class="app-navgroup">
+            <button class="app-navitem app-navparent" type="button" data-sec="professores">
+              <i class="bi bi-person-video3"></i>Professores<i class="bi bi-chevron-down app-caret"></i>
+            </button>
+            <div class="app-submenu">
+              <a href="#lista-professores" data-sec="professores">Lista</a>
+              <a href="#add-professor" data-sec="professores">Adicionar / Importar</a>
+            </div>
+          </div>
+          <div class="app-navgroup">
+            <button class="app-navitem app-navparent" type="button" data-sec="formandos">
+              <i class="bi bi-people"></i>Formandos<i class="bi bi-chevron-down app-caret"></i>
+            </button>
+            <div class="app-submenu">
+              <a href="#lista-formandos" data-sec="formandos">Lista</a>
+              <a href="#add-formando" data-sec="formandos">Inscrever / Importar</a>
+            </div>
+          </div>
+          <button class="app-navitem" type="button" data-sec="registo"><i class="bi bi-clock-history"></i>Registo de alterações</button>
+          {% endif %}
+        </nav>
+      </aside>
+
+      <div class="app-overlay"></div>
+
+      <!-- Conteúdo -->
+      <main class="app-main" id="conteudo" tabindex="-1">
         {# Sugestões de tipo de avaliação (não restritivas — o campo continua livre) #}
         <datalist id="tipos-avaliacao">
             <option value="Teste"></option>
@@ -44,15 +108,6 @@
             <option value="Prova oral"></option>
             <option value="Avaliação contínua"></option>
         </datalist>
-        <div class="mb-4">
-            {% if papel == 'professor' %}
-              <h1 class="h3 titulo-pagina mb-1">Área do Professor</h1>
-              <p class="text-muted mb-0">Gestão dos seus módulos.</p>
-            {% else %}
-              <h1 class="h3 titulo-pagina mb-1">Administração</h1>
-              <p class="text-muted mb-0">Área do coordenador — gestão do curso.</p>
-            {% endif %}
-        </div>
 
         <!-- Mensagens (erros / sucesso) -->
         {% with mensagens = get_flashed_messages(with_categories=true) %}
@@ -64,6 +119,64 @@
             {% endfor %}
           {% endif %}
         {% endwith %}
+
+        <!-- ============ Secção: Visão geral ============ -->
+        <section class="app-sec" data-sec="visao" id="sec-visao">
+        <h2 class="app-sec-titulo h4"><i class="bi bi-grid-1x2-fill me-2"></i>Visão geral</h2>
+        <div class="app-kpis">
+          <div class="app-kpi"><i class="bi bi-journal-text"></i>
+            <div class="valor">{{ dados.modulos|length }}</div><div class="rotulo">Módulos</div></div>
+          <div class="app-kpi"><i class="bi bi-graph-up-arrow"></i>
+            <div class="valor">{{ ((dados.modulos|sum(attribute='percentagem') / dados.modulos|length)|round(0)|int) if dados.modulos else 0 }}%</div>
+            <div class="rotulo">Conclusão média</div></div>
+          {% if papel == 'coordenador' %}
+          <div class="app-kpi"><i class="bi bi-people"></i>
+            <div class="valor">{{ dados.formandos|length }}</div><div class="rotulo">Formandos</div></div>
+          <div class="app-kpi"><i class="bi bi-person-video3"></i>
+            <div class="valor">{{ dados.professores|length }}</div><div class="rotulo">Professores</div></div>
+          {% endif %}
+        </div>
+
+        {% if dados.modulos %}
+        <!-- Linha de ação: o que vem aí + o que precisa de atenção. Tudo
+             calculado a partir dos dados já carregados (só leitura). -->
+        <div class="app-dash-grid">
+          <div class="card app-dash-card">
+            <div class="card-header bg-white">
+              <i class="bi bi-calendar-event me-1 text-forave"></i><strong>Próximas aulas e avaliações</strong>
+              <small class="text-muted ms-1">o que vem aí</small>
+            </div>
+            <div class="card-body">
+              <ul class="app-proximas" id="proximasEventos" aria-live="polite"></ul>
+            </div>
+          </div>
+          <div class="card app-dash-card">
+            <div class="card-header bg-white">
+              <i class="bi bi-exclamation-triangle me-1" style="color:#c77f0a"></i><strong>Precisa de atenção</strong>
+            </div>
+            <div class="card-body">
+              <ul class="app-alertas" id="alertasAtencao"></ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Linha de análise: progresso e estado dos módulos (gráficos) -->
+        <div class="app-dash-grid app-dash-grid-2">
+          <div class="card app-dash-card">
+            <div class="card-header bg-white">
+              <i class="bi bi-bar-chart-line me-1 text-forave"></i><strong>Progresso por módulo</strong>
+              <small class="text-muted ms-1">horas dadas vs. previstas</small>
+            </div>
+            <div class="card-body"><div class="app-chart-wrap"><canvas id="chartProgresso"></canvas></div></div>
+          </div>
+          <div class="card app-dash-card">
+            <div class="card-header bg-white">
+              <i class="bi bi-pie-chart me-1 text-forave"></i><strong>Estado dos módulos</strong>
+            </div>
+            <div class="card-body"><div class="app-chart-wrap"><canvas id="chartEstados"></canvas></div></div>
+          </div>
+        </div>
+        {% endif %}
 
         <!-- Calendário de overview: aulas + avaliações dos módulos visíveis
              (âmbito: o professor vê os seus; o coordenador vê o curso todo). -->
@@ -96,12 +209,18 @@
             </div>
         </div>
         {% endif %}
+        </section>
+        <!-- ============ /end Visão geral ============ -->
+
+        <!-- ============ Secção: Módulos ============ -->
+        <section class="app-sec" data-sec="modulos" id="sec-modulos" hidden>
+        <h2 class="app-sec-titulo h4"><i class="bi bi-journal-text me-2"></i>{% if papel == 'professor' %}Os meus módulos{% else %}Módulos{% endif %}</h2>
 
         {# Criar e importar módulos é reservado ao COORDENADOR (não aos
            professores, que só gerem os seus módulos já existentes). #}
         {% if papel == 'coordenador' %}
         <!-- Adicionar módulo -->
-        <div class="card">
+        <div class="card" id="add-modulo">
             <div class="card-header bg-white"><i class="bi bi-plus-square me-1"></i><strong>Adicionar módulo</strong></div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('admin_adicionar_modulo') }}" class="row g-2">
@@ -147,7 +266,7 @@
         </div>
 
         <!-- Importar cronograma em massa (CSV) -->
-        <div class="card">
+        <div class="card" id="importar-modulo">
             <div class="card-header bg-white"><i class="bi bi-filetype-csv me-1"></i><strong>Importar módulos por CSV</strong></div>
             <div class="card-body">
                 <p class="text-muted small mb-2">
@@ -171,7 +290,7 @@
         </div>
         {% endif %}
 
-        <h5 class="mt-4 mb-3 text-forave">
+        <h5 class="mt-4 mb-3 text-forave" id="lista-modulos">
           <i class="bi bi-journal-text me-1"></i>
           {% if papel == 'professor' %}Os meus módulos{% else %}Módulos{% endif %}
           ({{ dados.modulos|length }})
@@ -186,7 +305,7 @@
         {% endif %}
 
         {% for m in dados.modulos %}
-        <details class="card mod-detalhe">
+        <details class="card mod-detalhe app-filtravel" data-busca="{{ m.nome }} {{ m.ufcd }} {{ m.professor }}">
             <summary>
                 <span class="mod-titulo">{{ m.nome }}</span>
                 {% if m.ufcd %}<small class="text-muted">({{ m.ufcd }})</small>{% endif %}
@@ -430,12 +549,16 @@
             </div>
         </details>
         {% endfor %}
+        </section>
+        <!-- ============ /end Módulos ============ -->
 
         {# Gestão de PROFESSORES (só coordenador): dá email a um professor e
            associa-o a módulos -> esse email passa a entrar como professor e
            a ver só os seus módulos. É o que torna o papel utilizável na web. #}
         {% if papel == 'coordenador' %}
-        <h5 class="mt-4 mb-2 text-forave"><i class="bi bi-person-video3 me-1"></i>Professores</h5>
+        <!-- ============ Secção: Professores ============ -->
+        <section class="app-sec" data-sec="professores" id="sec-professores" hidden>
+        <h2 class="app-sec-titulo h4" id="lista-professores"><i class="bi bi-person-video3 me-2"></i>Professores</h2>
         <p class="text-muted small mb-2">
             Crie professores com email e associe-os a módulos. Cada professor,
             ao entrar no site com o seu email, passa a ver/gerir só os seus módulos.
@@ -446,7 +569,7 @@
             <div class="card-body">
                 {% if dados.professores %}
                   {% for p in dados.professores %}
-                    <details class="border rounded mb-2 p-2">
+                    <details class="border rounded mb-2 p-2 app-filtravel" data-busca="{{ p.nome }} {{ p.email }} {{ p.modulos | join(' ') }}">
                       <summary class="small">
                         <strong>{{ p.nome }}</strong> — {{ p.email }}
                         <span class="text-muted">({{ p.modulos | join(', ') if p.modulos else 'sem módulos' }})</span>
@@ -489,7 +612,7 @@
                   <p class="text-muted">Ainda não há professores registados.</p>
                 {% endif %}
 
-                <form method="POST" action="{{ url_for('admin_adicionar_professor') }}" class="row g-2">
+                <form method="POST" action="{{ url_for('admin_adicionar_professor') }}" class="row g-2" id="add-professor">
                     <div class="col-md-3">
                         <label class="form-label mb-0 small">Nome</label>
                         <input name="nome" class="form-control form-control-sm" required>
@@ -534,12 +657,16 @@
                 </form>
             </div>
         </div>
+        </section>
+        <!-- ============ /end Professores ============ -->
         {% endif %}
 
         {# Gestão de FORMANDOS (só coordenador): inscrever alunos e o direito
            ao apagamento (RGPD) — remover apaga o aluno E as suas notas. #}
         {% if papel == 'coordenador' %}
-        <h5 class="mt-4 mb-2 text-forave"><i class="bi bi-people me-1"></i>Formandos</h5>
+        <!-- ============ Secção: Formandos ============ -->
+        <section class="app-sec" data-sec="formandos" id="sec-formandos" hidden>
+        <h2 class="app-sec-titulo h4" id="lista-formandos"><i class="bi bi-people me-2"></i>Formandos</h2>
         <p class="text-muted small mb-2">
             Inscreva os alunos (nome + email) e associe-os a módulos. A remoção
             é o <strong>direito ao apagamento (RGPD)</strong>: apaga o aluno e as suas notas.
@@ -550,7 +677,7 @@
             <div class="card-body">
                 {% if dados.formandos %}
                   {% for f in dados.formandos %}
-                    <details class="border rounded mb-2 p-2">
+                    <details class="border rounded mb-2 p-2 app-filtravel" data-busca="{{ f.nome }} {{ f.email }} {{ f.modulos | join(' ') }}">
                       <summary class="small">
                         <strong>{{ f.nome }}</strong> — {{ f.email }}
                         <span class="text-muted">({{ f.modulos | join(', ') if f.modulos else 'sem módulos' }})</span>
@@ -589,7 +716,7 @@
                   <p class="text-muted">Ainda não há formandos inscritos.</p>
                 {% endif %}
 
-                <form method="POST" action="{{ url_for('admin_adicionar_formando') }}" class="row g-2">
+                <form method="POST" action="{{ url_for('admin_adicionar_formando') }}" class="row g-2" id="add-formando">
                     <div class="col-md-4">
                         <label class="form-label mb-0 small">Nome</label>
                         <input name="nome" class="form-control form-control-sm" required>
@@ -630,14 +757,17 @@
                 </form>
             </div>
         </div>
+        </section>
+        <!-- ============ /end Formandos ============ -->
         {% endif %}
 
         {# Registo de alterações (auditoria): visão de coordenação — inclui
            detalhe de notas de vários módulos, por isso só o coordenador o vê. #}
         {% if papel == 'coordenador' %}
-        <!-- Registo de alterações: quem fez o quê e quando (auditoria interna) -->
-        <div class="d-flex justify-content-between align-items-center mt-4 mb-2 flex-wrap gap-2">
-            <h5 class="mb-0 text-forave"><i class="bi bi-clock-history me-1"></i>Registo de alterações</h5>
+        <!-- ============ Secção: Registo de alterações ============ -->
+        <section class="app-sec" data-sec="registo" id="sec-registo" hidden>
+        <h2 class="app-sec-titulo h4"><i class="bi bi-clock-history me-2"></i>Registo de alterações</h2>
+        <div class="d-flex justify-content-end align-items-center mb-2 flex-wrap gap-2">
             <a href="{{ url_for('admin_auditoria_csv') }}" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-download me-1"></i>Descarregar registo completo (CSV)
             </a>
@@ -671,11 +801,14 @@
                 {% endif %}
             </div>
         </div>
+        </section>
+        <!-- ============ /end Registo ============ -->
         {% endif %}
 
         <footer class="rodape-app">
             Área de gestão · FORAVE — CET em Gestão de Informação e Ciência de Dados
         </footer>
+      </main>
     </div>
 
     <!-- Editor do cronograma: Nº de aulas -> N linhas (data em calendário +
@@ -759,7 +892,19 @@
     <script>
         // Eventos (aulas + avaliações) dos módulos que este utilizador vê.
         window.CAL_EVENTOS = {{ dados.eventos|tojson }};
+        // Dados dos módulos para a dashboard — SÓ campos não pessoais
+        // (nome, estado, horas, contagens). Nunca notas de alunos aqui.
+        window.VIZ_MODULOS = [
+        {% for m in dados.modulos %}
+            {"nome": {{ m.nome|tojson }}, "estado": {{ m.estado|tojson }},
+             "dadas": {{ m.horas_dadas|tojson }}, "totais": {{ m.horas_totais|tojson }},
+             "pct": {{ m.percentagem|tojson }}, "n_aulas": {{ m.sessoes|length }},
+             "n_avaliacoes": {{ m.avaliacoes|length }}}{{ "," if not loop.last else "" }}
+        {% endfor %}
+        ];
     </script>
+    <script src="{{ url_for('static', filename='vendor/chart/chart.min.js') }}"></script>
     <script src="{{ url_for('static', filename='calendario.js') }}"></script>
+    <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
 </body>
 </html>
