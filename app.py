@@ -103,6 +103,19 @@ if FONTE_DADOS == "db":
     import classes.repositorio_db as repositorio_db
     _engine_db = repositorio_db.criar_engine()
     repositorio_db.criar_tabelas(_engine_db)
+    # Auto-semear a demo SÓ se a base de dados estiver vazia (primeira vez,
+    # ou um deploy novo na cloud). Nunca escreve por cima de dados que já
+    # existam — só semeia quando não há módulos nenhuns. Assim o site nunca
+    # aparece vazio e não é preciso aceder a uma shell no servidor.
+    try:
+        if not repositorio_db.carregar_gestor(_engine_db)["modulos"]:
+            import seed_demo
+            seed_demo.semear(engine=_engine_db)
+            seed_demo.semear_contas(engine=_engine_db)
+            print("  Base de dados vazia — dados de demonstração semeados.")
+    except Exception as _erro_seed:
+        # O seed é uma conveniência — nunca deve impedir o arranque da app.
+        print(f"  [AVISO] auto-seed não concluído: {_erro_seed}")
 
 
 def carregar_gestor_do_sheets():

@@ -124,9 +124,15 @@ NOTAS = [
 ]
 
 
-def semear(pasta):
-    """Cria os dados de demo na pasta indicada (idempotente, não-destrutivo)."""
-    gestor = GestorCronograma(pasta_dados=pasta)
+def semear(pasta="dados", engine=None):
+    """
+    Cria os dados de demo (idempotente, não-destrutivo).
+
+    Com `engine`, semeia na base de dados (SQLite/PostgreSQL); sem ele,
+    nos ficheiros JSON da pasta indicada. Os métodos do gestor gravam
+    sozinhos, por isso não é preciso guardar no fim.
+    """
+    gestor = GestorCronograma(pasta_dados=pasta, engine=engine)
     gestor.carregar_dados()  # carrega o que já houver -> só acrescentamos o que falta
 
     # Professores (registo — o vínculo ao módulo é por nome e por esta lista)
@@ -160,9 +166,9 @@ def semear(pasta):
     return gestor
 
 
-def semear_contas(pasta):
+def semear_contas(pasta="dados", engine=None):
     """Cria as contas de acesso (coordenador, professor, alunos)."""
-    auth = GestorAutenticacao(caminho=os.path.join(pasta, "utilizadores.json"))
+    auth = GestorAutenticacao(caminho=os.path.join(pasta, "utilizadores.json"), engine=engine)
     contas = [(COORDENADOR, "coordenador")]
     contas.append((PROFESSOR_PRINCIPAL, "professor"))
     for _nome, email, _modulos in ALUNOS:

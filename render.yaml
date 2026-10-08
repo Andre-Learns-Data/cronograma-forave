@@ -1,14 +1,22 @@
 # ============================================================
-# render.yaml — Configuração de deploy no Render (Fase C)
+# render.yaml — Configuração de deploy no Render
 # ============================================================
-# "Blueprint" do Render: descreve o serviço web a criar. Ao ligar
-# o repositório ao Render, esta configuração é detectada e
-# pré-preenche o serviço. Ver o guia passo-a-passo em DEPLOY.md.
+# "Blueprint" do Render: descreve o que criar — uma base de dados
+# PostgreSQL e o serviço web — e liga-os entre si. Ver o guia
+# passo-a-passo em DEPLOY.md.
 #
-# NOTA: o ficheiro de credenciais do Google (credentials.json) NÃO
-# vai aqui nem para o GitHub — é carregado no Render como "Secret
-# File" e fica disponível em /etc/secrets/credentials.json.
+# Evolução (Out/2026): a persistência passou da Google Sheets para
+# PostgreSQL (base de dados relacional de verdade). A app usa a mesma
+# base de código em dev (SQLite) e em produção (PostgreSQL); é a
+# variável DATABASE_URL que decide qual. Aqui, o Render injeta a
+# DATABASE_URL do Postgres automaticamente (ver envVars).
 # ============================================================
+
+databases:
+  - name: cronograma-db
+    plan: free            # Postgres gratuito do Render (expira 30 dias após criação)
+    databaseName: cronograma
+    user: cronograma
 
 services:
   - type: web
@@ -18,15 +26,24 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:
-      # Lê os dados (e as contas) do Google Sheet privado, não de ficheiros locais
+      # Lê e escreve na base de dados (não na Google Sheet nem em ficheiros).
       - key: FONTE_DADOS
-        value: sheets
-      # Chave de sessão — o Render gera um valor aleatório seguro
+        value: db
+      # Ligação ao Postgres acima — o Render preenche isto automaticamente.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cronograma-db
+          property: connectionString
+      # Chave de sessão — o Render gera um valor aleatório seguro.
       - key: FLASK_SECRET_KEY
         generateValue: true
-      # ID da spreadsheet — preencher manualmente no painel do Render
-      - key: GOOGLE_SHEETS_NOME
+      # Emails que têm papel de coordenador (separados por vírgula).
+      # Preencher no painel do Render (o mesmo valor do .env local).
+      - key: COORDENADOR_EMAILS
         sync: false
-      # Caminho do credentials.json carregado como Secret File no Render
-      - key: GOOGLE_SHEETS_CREDENCIAIS
-        value: /etc/secrets/credentials.json
+      # Email transacional (Brevo) — opcional, só para a recuperação de
+      # password funcionar no alojamento. Preencher no painel se se quiser.
+      - key: BREVO_API_KEY
+        sync: false
+      - key: EMAIL_REMETENTE
+        sync: false
