@@ -114,3 +114,131 @@ document.addEventListener('DOMContentLoaded', function () {
         new bootstrap.Tooltip(el);
     });
 });
+
+// ------------------------------------------------------------
+// PWA + estado de ligação (online/offline) + instalar como app
+// ------------------------------------------------------------
+// Concentrado aqui para funcionar em TODAS as páginas que carregam o
+// forave.js, sem repetir código em cada template. É tudo "extra": se
+// algo falhar, nunca deve partir a página (por isso os try/catch).
+(function () {
+    'use strict';
+
+    // --- 1. Arrancar a PWA: garantir o <link rel="manifest"> e registar o
+    // service worker. Idempotente — só injeta o manifest se ainda não existir.
+    try {
+        if (!document.querySelector('link[rel="manifest"]')) {
+            var elo = document.createElement('link');
+            elo.rel = 'manifest';
+            elo.href = '/static/manifest.json';
+            document.head.appendChild(elo);
+        }
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/sw.js').catch(function () {});
+            });
+        }
+    } catch (e) { /* a PWA é um extra — nunca deve partir a página */ }
+
+    // --- 2. Faixa de aviso quando NÃO há ligação à internet.
+    // Sem net não se alcança a base de dados partilhada, logo editar não é
+    // possível. Avisamos de forma clara (em vez de falhar em silêncio) e
+    // bloqueamos os botões de submeter enquanto estiver offline.
+    var faixa = null;
+    var botoesBloqueados = [];
+
+    function garanteFaixa() {
+        if (faixa) return faixa;
+        faixa = document.createElement('div');
+        faixa.id = 'avisoOffline';
+        faixa.setAttribute('role', 'status');
+        faixa.style.cssText =
+            'position:sticky;top:0;z-index:1080;display:none;' +
+            'background:#f0ad4e;color:#3d2c00;text-align:center;' +
+            'padding:.5rem 1rem;font-size:.9rem;font-weight:600;' +
+            'box-shadow:0 2px 6px rgba(0,0,0,.15);';
+        faixa.innerHTML =
+            '<i class="bi bi-wifi-off me-1"></i>' +
+            'Sem ligação à internet — podes consultar, mas para guardar ' +
+            'alterações precisas de estar online.';
+        document.body.insertBefore(faixa, document.body.firstChild);
+        return faixa;
+    }
+
+    function aplicarEstadoLigacao() {
+        var offline = (navigator.onLine === false);
+        garanteFaixa().style.display = offline ? 'block' : 'none';
+
+        if (offline) {
+            // Desativa os botões de submeter — não se grava sem servidor.
+            // Um <button> sem type é "submit" por omissão, por isso apanhamos
+            // todos os <button> que NÃO sejam type="button"/"reset", mais os
+            // <input type="submit">.
+            document.querySelectorAll(
+                'form button:not([type="button"]):not([type="reset"]), ' +
+                'form input[type="submit"]')
+                .forEach(function (b) {
+                    if (!b.disabled) {
+                        b.disabled = true;
+                        b.dataset.offlineBloqueado = '1';
+                        botoesBloqueados.push(b);
+                    }
+                });
+        } else {
+            // Voltou a ligar: reativa só os que NÓS bloqueámos.
+            botoesBloqueados.forEach(function (b) {
+                if (b.dataset.offlineBloqueado) {
+                    b.disabled = false;
+                    delete b.dataset.offlineBloqueado;
+                }
+            });
+            botoesBloqueados = [];
+        }
+    }
+
+    window.addEventListener('online', aplicarEstadoLigacao);
+    window.addEventListener('offline', aplicarEstadoLigacao);
+    document.addEventListener('DOMContentLoaded', aplicarEstadoLigacao);
+
+    // --- 3. Botão "Instalar aplicação" (aparece só quando é instalável).
+    // O browser dispara 'beforeinstallprompt' quando a app pode ser instalada;
+    // guardamos o evento e mostramos um botão flutuante que, ao ser clicado,
+    // abre o instalador nativo (cria o ícone no ambiente de trabalho/telemóvel).
+    var promptInstalar = null;
+
+    function criaBotaoInstalar() {
+        if (document.getElementById('btnInstalarApp')) {
+            return document.getElementById('btnInstalarApp');
+        }
+        var btn = document.createElement('button');
+        btn.id = 'btnInstalarApp';
+        btn.type = 'button';
+        btn.className = 'btn btn-success btn-sm shadow';
+        btn.style.cssText =
+            'position:fixed;right:16px;bottom:16px;z-index:1080;display:none;';
+        btn.innerHTML = '<i class="bi bi-download me-1"></i>Instalar aplicação';
+        btn.addEventListener('click', function () {
+            if (!promptInstalar) return;
+            promptInstalar.prompt();
+            promptInstalar.userChoice.finally(function () {
+                promptInstalar = null;
+                btn.style.display = 'none';
+            });
+        });
+        document.body.appendChild(btn);
+        return btn;
+    }
+
+    window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();   // evita o mini-aviso automático do browser
+        promptInstalar = e;
+        var btn = criaBotaoInstalar();
+        if (btn) btn.style.display = 'inline-block';
+    });
+
+    window.addEventListener('appinstalled', function () {
+        promptInstalar = null;
+        var btn = document.getElementById('btnInstalarApp');
+        if (btn) btn.style.display = 'none';
+    });
+})();
