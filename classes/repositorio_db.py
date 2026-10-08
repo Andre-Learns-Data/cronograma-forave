@@ -230,6 +230,18 @@ def criar_tabelas(engine):
     metadata.create_all(engine)
 
 
+def recriar_tabelas(engine):
+    """
+    Apaga TODAS as tabelas e volta a criá-las (reset total e destrutivo).
+
+    Só é usado pela reposição dos dados de demonstração (ver RESEED_DEMO no
+    app.py). Serve para refrescar a demo no alojamento com as datas novas,
+    já que o seed normal é não-destrutivo (não reescreve o que já existe).
+    """
+    metadata.drop_all(engine)
+    metadata.create_all(engine)
+
+
 def _num(valor):
     """
     Devolve uma nota como int quando é um número inteiro (14 em vez de

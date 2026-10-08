@@ -103,6 +103,18 @@ if FONTE_DADOS == "db":
     import classes.repositorio_db as repositorio_db
     _engine_db = repositorio_db.criar_engine()
     repositorio_db.criar_tabelas(_engine_db)
+    # Reposição de demonstração (controlada por variável de ambiente): com
+    # RESEED_DEMO=1, apaga TUDO e deixa a base de dados vazia, para o auto-seed
+    # abaixo a semear de novo com os dados/datas atuais. Serve para refrescar a
+    # demo no alojamento (o seed normal é não-destrutivo e não reescreve o que
+    # já existe). IMPORTANTE: voltar a pôr RESEED_DEMO=0 no painel depois de usar,
+    # senão cada reinício do servidor volta a apagar o que se fez na demo.
+    if os.environ.get("RESEED_DEMO", "").strip().lower() in ("1", "true", "sim"):
+        try:
+            repositorio_db.recriar_tabelas(_engine_db)
+            print("  [RESEED_DEMO] Base de dados reposta — vai ser semeada de novo.")
+        except Exception as _erro_reset:
+            print(f"  [AVISO] RESEED_DEMO não concluído: {_erro_reset}")
     # Auto-semear a demo SÓ se a base de dados estiver vazia (primeira vez,
     # ou um deploy novo na cloud). Nunca escreve por cima de dados que já
     # existam — só semeia quando não há módulos nenhuns. Assim o site nunca

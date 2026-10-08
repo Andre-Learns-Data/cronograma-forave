@@ -25,6 +25,7 @@
 
 import os
 import sys
+from datetime import date, timedelta
 
 from classes.autenticacao import GestorAutenticacao
 from gestor_cronograma import GestorCronograma
@@ -54,16 +55,33 @@ def _sessoes(datas, horas_cada, n_dadas):
             for i, d in enumerate(datas)]
 
 
+def _data_rel(dias):
+    """
+    Devolve uma data (dd/mm/aaaa) deslocada `dias` a partir de HOJE.
+
+    Porquê: as datas da demo são relativas ao dia em que se semeia, para o
+    curso aparecer sempre "a decorrer" (aulas já dadas + próximas) em vez de
+    datas fixas que envelhecem. Semear perto da defesa dá uma dashboard viva.
+    """
+    return (date.today() + timedelta(days=dias)).strftime("%d/%m/%Y")
+
+
 # Módulos: (nome, professor, horas_totais, estado, ufcd, [sessoes]).
 # As horas DADAS já não se escrevem à mão — são a soma das aulas marcadas
 # como dadas (ver _sessoes). Ex.: Python = 5 aulas de 10h, 3 dadas -> 30/50h.
+# Datas ancoradas em HOJE (ver _data_rel): aulas semanais, umas já dadas e
+# outras por vir, para a dashboard e o calendário mostrarem vida.
 MODULOS = [
+    # Em curso: 5 aulas (−2 a +2 semanas), 3 já dadas -> 30/50h. Duas aulas e
+    # duas avaliações ficam no futuro -> aparecem em "Próximas aulas".
     ("Programação Avançada com Python", "Luís Cerejeira", 50, "em curso", "10794",
-     _sessoes(["02/06/2026", "09/06/2026", "16/06/2026", "23/06/2026", "30/06/2026"], 10, 3)),
+     _sessoes([_data_rel(-14), _data_rel(-7), _data_rel(0), _data_rel(7), _data_rel(14)], 10, 3)),
+    # Concluído: 4 aulas, todas no passado e dadas -> 40/40h (100%).
     ("Fundamentos de Bases de Dados", "Rita Fonseca", 40, "concluido", "",
-     _sessoes(["05/05/2026", "12/05/2026", "19/05/2026", "26/05/2026"], 10, 4)),
+     _sessoes([_data_rel(-56), _data_rel(-49), _data_rel(-42), _data_rel(-35)], 10, 4)),
+    # Em curso (a começar): 1 aula dada, 3 por vir -> 10/40h (25%).
     ("Análise e Visualização de Dados", "Miguel Santos", 40, "em curso", "",
-     _sessoes(["07/07/2026", "14/07/2026", "21/07/2026", "28/07/2026"], 10, 1)),
+     _sessoes([_data_rel(-7), _data_rel(7), _data_rel(14), _data_rel(21)], 10, 1)),
 ]
 
 # Aluno de TESTE com email REAL, para verificar a receção dos emails
@@ -88,15 +106,15 @@ ALUNOS = [
 # Avaliações por módulo: (data, tipo, descrição, objectivo, deliverables, peso)
 AVALIACOES = {
     "Programação Avançada com Python": [
-        ("16/06/2026", "Teste", "Teste 1 — POO e estruturas de dados",
+        (_data_rel(7), "Teste", "Teste 1 — POO e estruturas de dados",
          "Avaliar os fundamentos de POO", "Prova escrita", 30),
-        ("23/06/2026", "Projeto", "Projeto final",
+        (_data_rel(14), "Projeto", "Projeto final",
          "Aplicar tudo num programa real", "Repositório + demonstração", 50),
-        ("23/06/2026", "Avaliação contínua", "Participação nas aulas",
+        (_data_rel(14), "Avaliação contínua", "Participação nas aulas",
          "Empenho e participação", "—", 20),
     ],
     "Fundamentos de Bases de Dados": [
-        ("19/05/2026", "Teste", "Teste global",
+        (_data_rel(-35), "Teste", "Teste global",
          "Modelo relacional e SQL", "Prova escrita", 100),
     ],
 }
