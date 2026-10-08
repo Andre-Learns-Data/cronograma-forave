@@ -94,6 +94,16 @@ PASTA_DADOS = os.environ.get("PASTA_DADOS", "dados")
 _cache_sheets = {"gestor": None, "hora": 0.0}
 _CACHE_SEGUNDOS = 30
 
+# Base de dados (modo "db"): engine partilhado, criado UMA vez ao arrancar.
+# A variável DATABASE_URL decide qual base de dados — SQLite local por
+# defeito (ficheiro dados/cronograma.db), PostgreSQL na cloud. É o mesmo
+# código a correr nos dois sítios; só muda a variável de ambiente.
+_engine_db = None
+if FONTE_DADOS == "db":
+    import classes.repositorio_db as repositorio_db
+    _engine_db = repositorio_db.criar_engine()
+    repositorio_db.criar_tabelas(_engine_db)
+
 
 def carregar_gestor_do_sheets():
     """
@@ -133,6 +143,11 @@ def carregar_gestor():
     Retorna:
         GestorCronograma: gestor pronto a usar.
     """
+    if FONTE_DADOS == "db":
+        gestor = GestorCronograma(pasta_dados=PASTA_DADOS, engine=_engine_db)
+        gestor.carregar_dados()
+        return gestor
+
     if FONTE_DADOS == "sheets":
         agora = time.time()
         if (_cache_sheets["gestor"] is not None
@@ -174,6 +189,11 @@ def gestor_para_escrita():
         (GestorCronograma, GoogleSheetsSync|None): o gestor e, se alojado,
         a ligação ao Sheet. (None, None) se o Sheet não estiver acessível.
     """
+    if FONTE_DADOS == "db":
+        gestor = GestorCronograma(pasta_dados=PASTA_DADOS, engine=_engine_db)
+        gestor.carregar_dados()
+        return gestor, None
+
     if FONTE_DADOS == "sheets":
         credenciais = os.environ.get("GOOGLE_SHEETS_CREDENCIAIS", "credentials.json")
         spreadsheet = os.environ.get("GOOGLE_SHEETS_NOME", "")
@@ -203,6 +223,9 @@ def carregar_auth():
     Retorna:
         GestorAutenticacao: já com as contas carregadas.
     """
+    if FONTE_DADOS == "db":
+        return GestorAutenticacao(engine=_engine_db, secret=app.secret_key)
+
     if FONTE_DADOS == "sheets":
         credenciais = os.environ.get("GOOGLE_SHEETS_CREDENCIAIS", "credentials.json")
         spreadsheet = os.environ.get("GOOGLE_SHEETS_NOME", "")
@@ -995,7 +1018,12 @@ def registar_auditoria(gsheets, accao, detalhe):
     autor = utilizador_actual() or "coordenador"
     registo = RegistoAuditoria(autor=autor, accao=accao, detalhe=detalhe)
     try:
-        if gsheets is not None:
+        if _engine_db is not None:
+            # Modo base de dados: um simples INSERT na tabela de auditoria.
+            repositorio_db.registar_auditoria(
+                _engine_db, registo.data_hora, registo.autor,
+                registo.accao, registo.detalhe)
+        elif gsheets is not None:
             gsheets.acrescentar_auditoria(
                 registo.data_hora, registo.autor, registo.accao, registo.detalhe
             )
@@ -1026,7 +1054,9 @@ def ler_auditoria(limite=30):
         list: dicts {data_hora, autor, accao, detalhe}, recentes primeiro.
     """
     try:
-        if FONTE_DADOS == "sheets":
+        if FONTE_DADOS == "db":
+            brutos = repositorio_db.ler_auditoria(_engine_db)
+        elif FONTE_DADOS == "sheets":
             credenciais = os.environ.get("GOOGLE_SHEETS_CREDENCIAIS", "credentials.json")
             spreadsheet = os.environ.get("GOOGLE_SHEETS_NOME", "")
             gs = GoogleSheetsSync(credenciais, spreadsheet)

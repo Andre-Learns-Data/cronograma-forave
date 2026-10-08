@@ -52,7 +52,7 @@ class GestorAutenticacao:
         utilizadores (list): Lista de objectos Utilizador em memória.
     """
 
-    def __init__(self, caminho="dados/utilizadores.json", gsheets=None, secret=None):
+    def __init__(self, caminho="dados/utilizadores.json", gsheets=None, secret=None, engine=None):
         """
         Construtor — define o backend e carrega os utilizadores.
 
@@ -81,6 +81,9 @@ class GestorAutenticacao:
         # Fallback de desenvolvimento: se não for dada uma chave, usa-se uma
         # constante. Em produção a app passa a secret_key real (do ambiente).
         self.secret = secret or "dev-reposicao-key-mudar"
+        # Modo base de dados (SQLite/PostgreSQL): tem prioridade sobre
+        # Sheet e JSON. Se houver engine, as contas vivem na BD.
+        self.engine = engine
         self.utilizadores = []
         self.carregar()
 
@@ -97,6 +100,13 @@ class GestorAutenticacao:
         não existir (primeira vez), a lista fica vazia — sem erro.
         """
         self.utilizadores = []
+
+        # Modo base de dados: lê as contas da tabela "utilizadores".
+        if self.engine is not None:
+            import classes.repositorio_db as rdb
+            for d in rdb.carregar_utilizadores(self.engine):
+                self.utilizadores.append(utilizador_from_dict(d))
+            return
 
         if self.modo_sheets:
             for reg in self.gsheets.obter_utilizadores():
@@ -130,6 +140,12 @@ class GestorAutenticacao:
         lista_dicts = []
         for u in self.utilizadores:
             lista_dicts.append(u.to_dict())
+
+        # Modo base de dados: grava as contas na tabela "utilizadores".
+        if self.engine is not None:
+            import classes.repositorio_db as rdb
+            rdb.guardar_utilizadores(self.engine, lista_dicts)
+            return
 
         ficheiro = open(self.caminho, "w", encoding="utf-8")
         json.dump(lista_dicts, ficheiro, indent=4, ensure_ascii=False)

@@ -42,13 +42,17 @@ class GestorCronograma:
         pasta_dados (str): Caminho da pasta onde ficam os JSON.
     """
 
-    def __init__(self, pasta_dados="dados"):
+    def __init__(self, pasta_dados="dados", engine=None):
         """
         Construtor — inicializa o gestor com listas vazias.
 
         Parâmetros:
             pasta_dados (str): Pasta onde os ficheiros JSON são
                                guardados. Por defeito: "dados".
+            engine: Ligação à base de dados (SQLAlchemy). Se for dada,
+                    a persistência passa a ser na BD (SQLite/PostgreSQL)
+                    em vez dos ficheiros JSON — mesma lógica, outro
+                    armazenamento (padrão repositório).
         """
         self.modulos = []
         self.professores = []
@@ -56,6 +60,7 @@ class GestorCronograma:
         self.alteracoes = []
         self.notificacoes = []
         self.pasta_dados = pasta_dados
+        self.engine = engine
 
         # Criar a pasta de dados se não existir
         # os.path.exists() verifica se a pasta já existe
@@ -79,6 +84,36 @@ class GestorCronograma:
         Conceito: É o padrão lista vazia + for + append,
         mas em vez de append(texto), é append(dicionário).
         """
+        # Modo base de dados: delega no repositório (uma transação,
+        # ou grava tudo ou nada). O domínio continua a dar os mesmos
+        # dicionários (to_dict) — só muda o destino.
+        if self.engine is not None:
+            import classes.repositorio_db as rdb
+
+            modulos_dict = []
+            for m in self.modulos:
+                modulos_dict.append(m.to_dict())
+
+            professores_dict = []
+            for p in self.professores:
+                professores_dict.append(p.to_dict())
+
+            formandos_dict = []
+            for f in self.formandos:
+                formandos_dict.append(f.to_dict())
+
+            alteracoes_dict = []
+            for a in self.alteracoes:
+                alteracoes_dict.append(a.to_dict())
+
+            notificacoes_dict = []
+            for n in self.notificacoes:
+                notificacoes_dict.append(n.to_dict())
+
+            rdb.guardar_gestor(self.engine, modulos_dict, professores_dict,
+                               formandos_dict, alteracoes_dict, notificacoes_dict)
+            return
+
         # --- Guardar módulos ---
         lista_dicts = []
         for m in self.modulos:
@@ -144,6 +179,33 @@ class GestorCronograma:
 
         Conceito: try/except FileNotFoundError — padrão da Aula 7.
         """
+        # Modo base de dados: lê da BD e reconstrói os objectos com os
+        # mesmos from_dict() de sempre (a BD devolve os mesmos dicts).
+        if self.engine is not None:
+            import classes.repositorio_db as rdb
+            dados = rdb.carregar_gestor(self.engine)
+
+            self.modulos = []
+            for d in dados["modulos"]:
+                self.modulos.append(modulo_from_dict(d))
+
+            self.professores = []
+            for d in dados["professores"]:
+                self.professores.append(professor_from_dict(d))
+
+            self.formandos = []
+            for d in dados["formandos"]:
+                self.formandos.append(formando_from_dict(d))
+
+            self.alteracoes = []
+            for d in dados["alteracoes"]:
+                self.alteracoes.append(alteracao_from_dict(d))
+
+            self.notificacoes = []
+            for d in dados["notificacoes"]:
+                self.notificacoes.append(notificacao_from_dict(d))
+            return
+
         # --- Carregar módulos ---
         self.modulos = []
         caminho = self.pasta_dados + "/modulos.json"

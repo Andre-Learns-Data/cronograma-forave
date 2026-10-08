@@ -30,5 +30,11 @@ pillow==12.2.0
 # Localmente em Windows não corre; o app.py usa app.run() para dev.
 gunicorn==23.0.0
 
+# Base de dados (Out/2026): camada que fala com SQLite (dev) e
+# PostgreSQL (produção) com o mesmo código. A escolha é feita pela
+# variável DATABASE_URL. O SQLite já vem com o Python; o PostgreSQL
+# precisa também de um driver (psycopg) — acrescentado na Fase 2.
+SQLAlchemy==2.0.43
+
 # Excel export (semana 4 — opcional)
 # openpyxl==3.1.5
