@@ -10,6 +10,8 @@
 # Executar com: python main.py
 # ============================================================
 
+import os
+
 from classes.email_sender import EmailSender
 from classes.gerador_qr import gerar_qr
 from classes.google_sheets import GoogleSheetsSync
@@ -624,8 +626,15 @@ def main():
     print("  A carregar configurações...")
     config = carregar_configuracao()
 
-    # 2. Dados JSON
-    gestor = GestorCronograma(pasta_dados="dados")
+    # 2. Dados — base de dados (SQLite/PostgreSQL) ou JSON local.
+    # Se FONTE_DADOS=db, o terminal usa a MESMA base de dados que a web
+    # (uma só fonte de verdade: uma alteração aqui aparece já na web).
+    engine = None
+    if os.environ.get("FONTE_DADOS", "json") == "db":
+        import classes.repositorio_db as repositorio_db
+        engine = repositorio_db.criar_engine()
+        repositorio_db.criar_tabelas(engine)
+    gestor = GestorCronograma(pasta_dados="dados", engine=engine)
     gestor.carregar_dados()
     print(f"  Dados: {len(gestor.modulos)} módulos, "
           f"{len(gestor.professores)} professores, "
