@@ -136,10 +136,16 @@ a:focus-visible {
 }
 
 /* Etiquetas de estado dos módulos (centralizadas — antes repetidas em
-   cada página). Cores semânticas, não de marca, para lerem "estado". */
-.badge-em-curso { background-color: #0d6efd; }
-.badge-concluido { background-color: #198754; }
-.badge-pendente { background-color: #6c757d; }
+   cada página e em <style> inline). Cores alinhadas com os gráficos do
+   dashboard: concluído=verde, em curso=âmbar, planeado=cinza — a mesma
+   cor para o mesmo estado em todo o lado. Nunca azul (destoava da marca). */
+.badge-em-curso { background-color: #c77f0a; }
+.badge-concluido { background-color: #1a7a3a; }
+.badge-pendente { background-color: #8a95a3; }
+
+/* Barras de progresso -> verde da marca (o Bootstrap usa azul por omissão).
+   A barra mostra a % de horas dadas; o ESTADO é dado pelo badge ao lado. */
+.progress-bar { background-color: var(--forave-verde); }
 
 /* Barra de navegação das páginas autenticadas (verde da marca) */
 .app-navbar {
@@ -181,7 +187,7 @@ a:focus-visible {
 .cal-corpo { overflow-x: auto; }
 .cal-grelha { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; min-width: 560px; }
 .cal-cabeca { text-align: center; font-weight: 600; font-size: .8rem; color: #6c757d; padding: 2px 0; }
-.cal-dia { min-height: 78px; border: 1px solid #e2e8e5; border-radius: 6px; padding: 3px 4px; background: #fff; }
+.cal-dia { min-height: 56px; border: 1px solid #e2e8e5; border-radius: 6px; padding: 3px 4px; background: #fff; }
 .cal-fora { background: #f4f6f5; color: #adb5bd; }
 .cal-hoje { border-color: var(--forave-verde); box-shadow: inset 0 0 0 1px var(--forave-verde); }
 .cal-num { text-align: right; font-size: .78rem; color: #6c757d; margin-bottom: 2px; }
@@ -193,7 +199,7 @@ a:focus-visible {
 .cal-aula-dada { background: #9fb8ad; }
 .cal-avaliacao { background: var(--forave-dourado); color: #4a3b00; font-weight: 600; }
 .cal-mais { font-size: .7rem; color: #6c757d; padding-left: 3px; }
-.cal-grelha-semana .cal-dia-semana { min-height: 150px; }
+.cal-grelha-semana .cal-dia-semana { min-height: 110px; }
 .cal-cabeca-semana { text-align: center; font-weight: 600; font-size: .8rem;
     color: var(--forave-verde-escuro); border-bottom: 1px solid #e2e8e5;
     margin-bottom: 4px; padding-bottom: 2px; }

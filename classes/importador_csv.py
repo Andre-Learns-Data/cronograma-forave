@@ -30,6 +30,8 @@
 
 import csv
 
+from classes.validacao import email_valido
+
 
 class ImportadorCSV:
     """
@@ -198,6 +200,14 @@ class ImportadorCSV:
             try:
                 email = linha["email"].strip()
 
+                # Email com formato inválido -> conta como erro (não entra).
+                # Fecha a mesma porta que a validação do servidor (app.py).
+                if not email_valido(email):
+                    resumo["erros"] = resumo["erros"] + 1
+                    resumo["erros_detalhe"].append(
+                        f"Linha {numero_linha}: email inválido '{email}'")
+                    continue
+
                 # Saltar duplicados pelo email (chave única — Sessão 2)
                 if gestor.formando_existe(email):
                     resumo["saltados"] = resumo["saltados"] + 1
@@ -251,6 +261,13 @@ class ImportadorCSV:
             numero_linha = numero_linha + 1
             try:
                 email = linha["email"].strip()
+
+                # Email com formato inválido -> conta como erro (não entra).
+                if not email_valido(email):
+                    resumo["erros"] = resumo["erros"] + 1
+                    resumo["erros_detalhe"].append(
+                        f"Linha {numero_linha}: email inválido '{email}'")
+                    continue
 
                 # Saltar duplicados pelo email (chave única — Sessão 2)
                 if gestor.professor_existe(email):

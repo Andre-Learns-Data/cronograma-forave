@@ -18,9 +18,7 @@
             color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;
         }
         .nota-final { font-size: 1.6rem; font-weight: bold; color: #196141; }
-        .badge-em-curso { background-color: #0d6efd; }
-        .badge-concluido { background-color: #198754; }
-        .badge-pendente { background-color: #6c757d; }
+        /* badges de estado e barras de progresso: cores centralizadas em forave.css */
         /* O CSS do calendário (.cal-*) está no forave.css — partilhado com a área do staff. */
     </style>
 </head>
@@ -125,7 +123,7 @@
                                     </td>
                                     <td class="text-center">
                                         {% if av.nota is not none %}
-                                            <span class="badge bg-primary">{{ av.nota }}</span>
+                                            <span class="badge bg-forave">{{ av.nota }}</span>
                                         {% else %}
                                             <span class="text-muted">—</span>
                                         {% endif %}

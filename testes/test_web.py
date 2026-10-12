@@ -91,7 +91,7 @@ class TestWeb(unittest.TestCase):
                     follow_redirects=True)
         r = cliente.get("/cronograma")
         self.assertEqual(r.status_code, 200)
-        self.assertIn("Cockpit", r.get_data(as_text=True))  # página do cronograma
+        self.assertIn("Cronograma do curso", r.get_data(as_text=True))  # página do cronograma
 
     def test_api_schedule_exige_login(self):
         # Sem sessão a API não devolve dados (redirecciona para o login)
@@ -905,6 +905,27 @@ class TestWeb(unittest.TestCase):
         self.assertEqual(r.headers.get("X-Content-Type-Options"), "nosniff")
         self.assertEqual(r.headers.get("X-Frame-Options"), "SAMEORIGIN")
         self.assertIn("Referrer-Policy", r.headers)
+
+    # --- Validação de email no servidor (não só no browser) ---
+
+    def test_registo_email_invalido_bloqueado(self):
+        # Um POST directo com email malformado é recusado pelo servidor.
+        r = self.client.post("/registar",
+                             data={"email": "sem-arroba",
+                                   "password": "segredo", "password2": "segredo"},
+                             follow_redirects=True)
+        self.assertIn("não parece válido", r.get_data(as_text=True))
+
+    def test_admin_formando_email_invalido_bloqueado(self):
+        # O coordenador tenta inscrever um formando com email inválido -> não cria.
+        cliente = self._cliente_coordenador()
+        cliente.post("/admin/formando",
+                    data={"nome": "Email Mau", "email": "isto-nao-e-email",
+                          "modulos": ["Python"]},
+                    follow_redirects=True)
+        g = GestorCronograma(pasta_dados=_PASTA)
+        g.carregar_dados()
+        self.assertFalse(g.formando_existe("isto-nao-e-email"))
 
 
 class TestConversaoDatas(unittest.TestCase):

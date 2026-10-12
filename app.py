@@ -57,6 +57,7 @@ from classes.google_sheets import GoogleSheetsSync
 from classes.importador_csv import ImportadorCSV
 from classes.insights_engine import InsightsEngine
 from classes.token_modulo import criar_token_modulo, validar_token_modulo
+from classes.validacao import email_valido
 from gestor_cronograma import GestorCronograma
 
 app = Flask(__name__)
@@ -820,6 +821,10 @@ def registar():
             flash('Preenche o email e a password.', 'erro')
             return redirect(url_for('registar', perfil=perfil))
 
+        if not email_valido(email):
+            flash('Esse email não parece válido. Usa o formato nome@forave.pt.', 'erro')
+            return redirect(url_for('registar', perfil=perfil))
+
         if password != password2:
             flash('As duas passwords não coincidem.', 'erro')
             return redirect(url_for('registar', perfil=perfil))
@@ -1436,6 +1441,10 @@ def admin_adicionar_professor():
         flash('O professor precisa de nome e email.', 'erro')
         return redirect(url_for('admin'))
 
+    if not email_valido(email):
+        flash(f'O email "{email}" não parece válido.', 'erro')
+        return redirect(url_for('admin'))
+
     gestor, gsheets = gestor_para_escrita()
     if gestor is None:
         flash('Sem ligação ao Google Sheet — tenta novamente.', 'erro')
@@ -1568,6 +1577,10 @@ def admin_adicionar_formando():
 
     if nome == '' or email == '':
         flash('O formando precisa de nome e email.', 'erro')
+        return redirect(url_for('admin'))
+
+    if not email_valido(email):
+        flash(f'O email "{email}" não parece válido.', 'erro')
         return redirect(url_for('admin'))
 
     gestor, gsheets = gestor_para_escrita()

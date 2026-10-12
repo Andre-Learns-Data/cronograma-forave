@@ -104,6 +104,17 @@ class TestImportadorCSV(unittest.TestCase):
         r2 = self.imp.importar_formandos(caminho, self.gestor)
         self.assertEqual(r2["saltados"], 1)
 
+    def test_importar_formandos_email_invalido_conta_como_erro(self):
+        # Um email malformado não entra: conta como erro (não como importado).
+        csv = "nome,email,modulos\n" \
+              "Bom,bom@x.pt,Python\n" \
+              "Mau,isto-nao-e-email,Python\n"
+        caminho = self._escrever("f.csv", csv)
+        r = self.imp.importar_formandos(caminho, self.gestor)
+        self.assertEqual(r["importados"], 1)
+        self.assertEqual(r["erros"], 1)
+        self.assertFalse(self.gestor.formando_existe("isto-nao-e-email"))
+
     def test_importar_professores(self):
         csv = "nome,email,telefone,modulos\n" \
               "Luis,luis@x.pt,912345678,Python;Redes\n"
