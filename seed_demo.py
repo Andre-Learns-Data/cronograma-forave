@@ -92,6 +92,7 @@ _SES_MAT = _sessoes(["04/06/2026", "18/06/2026"], 25, 2)    # 50/50h
 _SES_LP = _sessoes(["10/06/2026"], 25, 1)                   # 25/25h
 _SES_ETICA = _sessoes(["24/06/2026"], 25, 1)                # 25/25h
 _SES_FOLHA = _sessoes(["08/07/2026"], 25, 1)                # 25/25h
+_SES_ESTAT = _sessoes(["05/06/2026", "19/06/2026"], 25, 2)  # 50/50h
 
 # Módulos: (nome, professor, horas_totais, estado, ufcd, [sessoes]).
 # Códigos e horas OFICIAIS (plano EGICD). Só os 6 primeiros têm cronograma
@@ -107,17 +108,16 @@ MODULOS = [
     ("Língua Portuguesa - Escrita de Textos", "Ana Teixeira", 25, "concluido", "5143", _SES_LP),
     ("Ética e Deontologia Profissionais", "Stéphanie Dermagne", 25, "concluido", "683", _SES_ETICA),
     ("Folha de Cálculo - Funcionalidades Avançadas", "José Ramalhoto", 25, "concluido", "757", _SES_FOLHA),
+    ("Estatística Aplicada à Gestão", "José Ramalhoto", 50, "concluido", "2166", _SES_ESTAT),
     # Restantes: listadas, sem cronograma (ainda não dadas).
     ("Transformação de Dados", "Luís Cerejeira", 25, "pendente", "10800", []),
     ("Gestão e Armazenamento de Dados", "Alberto Pereira", 50, "pendente", "10797", []),
     ("Princípios da Análise Exploratória de Dados", "Carlos Vicente", 25, "pendente", "10807", []),
     ("Programação em Python", "Carlos Vicente", 50, "pendente", "10805", []),
     ("Linguagens de Scripting e Linha de Comandos", "Carlos Vicente", 25, "pendente", "10806", []),
-    ("Estatística Aplicada à Gestão", "José Ramalhoto", 50, "pendente", "2166", []),
     ("Engenharia de Software", "Paulo Cunha", 25, "pendente", "5409", []),
     ("Fundamentos de Cibersegurança", "Rui Chilro", 25, "pendente", "9188", []),
     ("Limpeza e Transformação de Dados em Python", "Rui Chilro", 25, "pendente", "10808", []),
-    ("Visualização de Dados", "José Ramalhoto", 25, "pendente", "10801", []),
     ("Empresa - Estrutura Organizacional", "Stéphanie Dermagne", 25, "pendente", "7825", []),
     ("Introdução à Proteção de Dados Pessoais", "Stéphanie Dermagne", 25, "pendente", "10672", []),
 ]
