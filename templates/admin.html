@@ -215,6 +215,11 @@
         <!-- ============ Secção: Módulos ============ -->
         <section class="app-sec" data-sec="modulos" id="sec-modulos" hidden>
         <h2 class="app-sec-titulo h4"><i class="bi bi-journal-text me-2"></i>{% if papel == 'professor' %}Os meus módulos{% else %}Módulos{% endif %}</h2>
+        {% if papel == 'coordenador' %}
+        <div class="d-flex justify-content-end mb-2">
+          <a href="{{ url_for('admin_exportar_modulos_csv') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-filetype-csv me-1"></i>Exportar módulos (CSV)</a>
+        </div>
+        {% endif %}
 
         {# Criar e importar módulos é reservado ao COORDENADOR (não aos
            professores, que só gerem os seus módulos já existentes). #}
@@ -311,6 +316,7 @@
                 {% if m.ufcd %}<small class="text-muted">({{ m.ufcd }})</small>{% endif %}
                 <span class="badge bg-secondary ms-2">{{ m.estado or '—' }}</span>
                 <span class="text-muted small ms-2">{{ m.horas_dadas }}/{{ m.horas_totais }}h · {{ m.percentagem }}%</span>
+                <span class="text-muted small ms-2"><i class="bi bi-chevron-down"></i> clicar para editar · cronograma · avaliações · notas</span>
             </summary>
             <div class="card-body">
                 <!-- Editar módulo (campos pré-preenchidos; o nome é a chave e não muda) -->
@@ -559,6 +565,9 @@
         <!-- ============ Secção: Professores ============ -->
         <section class="app-sec" data-sec="professores" id="sec-professores" hidden>
         <h2 class="app-sec-titulo h4" id="lista-professores"><i class="bi bi-person-video3 me-2"></i>Professores</h2>
+        <div class="d-flex justify-content-end mb-2">
+          <a href="{{ url_for('admin_exportar_professores_csv') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-filetype-csv me-1"></i>Exportar professores (CSV)</a>
+        </div>
         <p class="text-muted small mb-2">
             Crie professores com email e associe-os a módulos. Cada professor,
             ao entrar no site com o seu email, passa a ver/gerir só os seus módulos.
@@ -573,6 +582,7 @@
                       <summary class="small">
                         <strong>{{ p.nome }}</strong> — {{ p.email }}
                         <span class="text-muted">({{ p.modulos | join(', ') if p.modulos else 'sem módulos' }})</span>
+                        <span class="text-muted ms-2"><i class="bi bi-chevron-down"></i> clicar para editar / remover</span>
                       </summary>
                       <form method="POST" action="{{ url_for('admin_editar_professor') }}" class="row g-2 mt-2">
                         <input type="hidden" name="email" value="{{ p.email }}">
@@ -667,6 +677,9 @@
         <!-- ============ Secção: Formandos ============ -->
         <section class="app-sec" data-sec="formandos" id="sec-formandos" hidden>
         <h2 class="app-sec-titulo h4" id="lista-formandos"><i class="bi bi-people me-2"></i>Formandos</h2>
+        <div class="d-flex justify-content-end mb-2">
+          <a href="{{ url_for('admin_exportar_formandos_csv') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-filetype-csv me-1"></i>Exportar formandos (CSV)</a>
+        </div>
         <p class="text-muted small mb-2">
             Inscreva os alunos (nome + email) e associe-os a módulos. A remoção
             é o <strong>direito ao apagamento (RGPD)</strong>: apaga o aluno e as suas notas.
@@ -681,6 +694,7 @@
                       <summary class="small">
                         <strong>{{ f.nome }}</strong> — {{ f.email }}
                         <span class="text-muted">({{ f.modulos | join(', ') if f.modulos else 'sem módulos' }})</span>
+                        <span class="text-muted ms-2"><i class="bi bi-chevron-down"></i> clicar para editar / remover</span>
                       </summary>
                       <form method="POST" action="{{ url_for('admin_editar_formando') }}" class="row g-2 mt-2">
                         <input type="hidden" name="email" value="{{ f.email }}">
@@ -768,6 +782,9 @@
         <section class="app-sec" data-sec="registo" id="sec-registo" hidden>
         <h2 class="app-sec-titulo h4"><i class="bi bi-clock-history me-2"></i>Registo de alterações</h2>
         <div class="d-flex justify-content-end align-items-center mb-2 flex-wrap gap-2">
+            <a href="{{ url_for('admin_exportar_notas_csv') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-filetype-csv me-1"></i>Exportar notas (CSV)
+            </a>
             <a href="{{ url_for('admin_auditoria_csv') }}" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-download me-1"></i>Descarregar registo completo (CSV)
             </a>

@@ -927,6 +927,44 @@ class TestWeb(unittest.TestCase):
         g.carregar_dados()
         self.assertFalse(g.formando_existe("isto-nao-e-email"))
 
+    # --- Exportação CSV dos dados (simetria com a importação + backup) ---
+
+    def test_exportar_modulos_csv(self):
+        cliente = self._cliente_coordenador()
+        r = cliente.get("/admin/exportar/modulos.csv")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("text/csv", r.headers.get("Content-Type", ""))
+        texto = r.get_data(as_text=True)
+        self.assertIn("ufcd,nome,professor", texto)   # cabeçalho
+        self.assertIn("Python", texto)                 # módulo semeado
+
+    def test_exportar_formandos_csv(self):
+        cliente = self._cliente_coordenador()
+        r = cliente.get("/admin/exportar/formandos.csv")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("ana@forave.org", r.get_data(as_text=True))
+
+    def test_exportar_professores_csv(self):
+        cliente = self._cliente_coordenador()
+        r = cliente.get("/admin/exportar/professores.csv")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("bruno@forave.org", r.get_data(as_text=True))
+
+    def test_exportar_notas_csv(self):
+        cliente = self._cliente_coordenador()
+        r = cliente.get("/admin/exportar/notas.csv")
+        self.assertEqual(r.status_code, 200)
+        texto = r.get_data(as_text=True)
+        self.assertIn("modulo,ufcd,avaliacao", texto)  # cabeçalho
+        self.assertIn("ana@forave.org", texto)          # a Ana tem notas
+
+    def test_exportar_dados_so_coordenador(self):
+        # Um professor (não coordenador) não pode exportar dados pessoais.
+        cliente = self._cliente_professor()
+        r = cliente.get("/admin/exportar/formandos.csv")
+        self.assertEqual(r.status_code, 302)
+        self.assertIn("/login", r.headers.get("Location", ""))
+
 
 class TestConversaoDatas(unittest.TestCase):
     """Conversao de datas entre o calendario (ISO) e o formato do sistema.

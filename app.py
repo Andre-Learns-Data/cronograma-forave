@@ -1253,6 +1253,100 @@ def admin_auditoria_csv():
     )
 
 
+def _csv_response(nome_ficheiro, cabecalho, linhas):
+    """
+    Constrói uma resposta CSV para descarregar, com BOM (para o Excel abrir
+    os acentos corretamente). Centraliza o padrão das exportações, para não
+    o repetir em cada rota.
+
+    Parâmetros:
+        nome_ficheiro (str): nome sugerido (ex.: "modulos.csv").
+        cabecalho (list): nomes das colunas.
+        linhas (list): lista de linhas (cada uma é uma lista de valores).
+    """
+    import csv
+    buffer = StringIO()
+    escritor = csv.writer(buffer)
+    escritor.writerow(cabecalho)
+    for linha in linhas:
+        escritor.writerow(linha)
+    conteudo = "﻿" + buffer.getvalue()   # BOM para o Excel
+    return Response(
+        conteudo,
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{nome_ficheiro}"'},
+    )
+
+
+@app.route('/admin/exportar/modulos.csv')
+@apenas_coordenador
+def admin_exportar_modulos_csv():
+    """
+    Exporta os módulos em CSV, no MESMO formato aceite pela importação
+    (ufcd,nome,professor,horas_totais,horas_dadas,estado,datas). Fecha a
+    simetria importar/exportar e serve de cópia de segurança (round-trip).
+    """
+    gestor = carregar_gestor()
+    linhas = []
+    for m in gestor.modulos:
+        linhas.append([m.ufcd, m.nome, m.professor, m.horas_totais,
+                       m.horas_dadas, m.estado, ";".join(m.datas)])
+    return _csv_response(
+        "modulos.csv",
+        ["ufcd", "nome", "professor", "horas_totais", "horas_dadas", "estado", "datas"],
+        linhas)
+
+
+@app.route('/admin/exportar/formandos.csv')
+@apenas_coordenador
+def admin_exportar_formandos_csv():
+    """
+    Exporta os formandos em CSV (nome,email,modulos) — mesmo formato da
+    importação. Tem emails (dado pessoal) -> só o coordenador.
+    """
+    gestor = carregar_gestor()
+    linhas = []
+    for f in gestor.formandos:
+        linhas.append([f.nome, f.email, ";".join(f.modulos)])
+    return _csv_response("formandos.csv", ["nome", "email", "modulos"], linhas)
+
+
+@app.route('/admin/exportar/professores.csv')
+@apenas_coordenador
+def admin_exportar_professores_csv():
+    """
+    Exporta os professores em CSV (nome,email,telefone,modulos) — mesmo
+    formato da importação.
+    """
+    gestor = carregar_gestor()
+    linhas = []
+    for p in gestor.professores:
+        linhas.append([p.nome, p.email, p.telefone, ";".join(p.modulos)])
+    return _csv_response(
+        "professores.csv", ["nome", "email", "telefone", "modulos"], linhas)
+
+
+@app.route('/admin/exportar/notas.csv')
+@apenas_coordenador
+def admin_exportar_notas_csv():
+    """
+    Exporta as notas lançadas em CSV — uma linha por nota: módulo, UFCD,
+    avaliação, peso, email do aluno e nota. São dados pessoais sensíveis
+    -> só o coordenador. Útil como pauta/arquivo fora do sistema.
+    """
+    gestor = carregar_gestor()
+    linhas = []
+    for m in gestor.modulos:
+        for av in m.avaliacoes:
+            for email in av.notas:
+                linhas.append([m.nome, m.ufcd, av.descricao, av.peso,
+                               email, av.notas[email]])
+    return _csv_response(
+        "notas.csv",
+        ["modulo", "ufcd", "avaliacao", "peso", "email", "nota"],
+        linhas)
+
+
 @app.route('/admin/modulo', methods=['POST'])
 @apenas_coordenador
 def admin_adicionar_modulo():
