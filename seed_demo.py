@@ -1,9 +1,9 @@
 # ============================================================
 # seed_demo.py — Semeia DADOS DE DEMONSTRAÇÃO
 # ============================================================
-# Enche o sistema com um curso de demonstração (módulos, professores,
-# alunos, avaliações e notas) e cria as contas de acesso — tudo num só
-# comando, para a demo estar pronta em segundos.
+# Enche o sistema com o curso REAL (EGICD — Técnico/a Especialista em
+# Gestão de Informação e Ciência dos Dados) e cria as contas de acesso —
+# tudo num só comando, para a demo estar pronta em segundos.
 #
 # Como os 3 canais LOCAIS (terminal `main.py`, web `app.py` e o `.exe`)
 # leem os MESMOS ficheiros `dados/*.json`, este script serve os três.
@@ -16,33 +16,58 @@
 # "dados/" vazia) fica com a demo toda.
 #
 # CONTAS (todas com a mesma password de demo — ver PASSWORD_DEMO):
-#   - Coordenador: chronosforave@gmail.com   (vê/gere tudo)
-#   - Professor:   luis.cerejeira@forave.pt    (vê só o módulo dele)
-#   - 4 alunos     (veem só as suas notas)
+#   - Coordenador: chronosforave@gmail.com    (vê/gere tudo)
+#   - Professor:   luis.cerejeira@forave.pt    (vê só os módulos dele)
+#   - Aluno:       alunoforavecetdados@gmail.com (vê as suas notas + recebe
+#                  os avisos automáticos — é a MESMA conta da demo de email)
 #
-# NÃO usar dados reais aqui — é só demonstração.
+# REGRAS DA DEMO (decididas com o André):
+#   - Só o módulo do Prof. Cerejeira (Programação Avançada com Python) tem
+#     CRONOGRAMA; os restantes ficam listados em "pendente", sem datas —
+#     não se inventa calendário de aulas que ainda não foram dadas.
+#   - A última aula do Cerejeira fica em 30/09/2026 (o previsto) — é a que
+#     se REAGENDA ao vivo para 14/10/2026 na demo.
+#   - O Inglês Técnico (UFCD 5745, Prof. Ricardo Mendes) NÃO é semeado:
+#     importa-se ao vivo a partir de importar_modulos_demo.csv.
 # ============================================================
 
 import os
 import sys
-from datetime import date, timedelta
 
 from classes.autenticacao import GestorAutenticacao
 from gestor_cronograma import GestorCronograma
 
 # ------------------------------------------------------------
-# Conteúdo da demonstração (CET Gestão de Informação e Ciência de Dados)
+# Contas e password de demo
 # ------------------------------------------------------------
 PASSWORD_DEMO = "demo1234"
 COORDENADOR = "chronosforave@gmail.com"
 PROFESSOR_PRINCIPAL = "luis.cerejeira@forave.pt"
+# Aluno de demonstração com email REAL: serve de persona "aluno" E de
+# destinatário dos avisos automáticos (nota individual / reagendamento).
+EMAIL_ALUNO_TESTE = "alunoforavecetdados@gmail.com"
 
-# Professores: (nome, email, telefone, [módulos que gere])
+# ------------------------------------------------------------
+# Nomes dos módulos (constantes para o vínculo professor<->módulo bater certo)
+# ------------------------------------------------------------
+M_PY_AV = "Programação Avançada com Python"
+
+# Professores do curso (nome, email, telefone, [módulos]). O vínculo ao
+# módulo é por nome (campo 'professor' de cada módulo), por isso a lista
+# de módulos aqui pode ficar vazia.
 PROFESSORES = [
-    ("Luís Cerejeira", PROFESSOR_PRINCIPAL, "", ["Programação Avançada com Python"]),
-    ("Rita Fonseca", "rita.fonseca@forave.pt", "", ["Fundamentos de Bases de Dados"]),
-    ("Miguel Santos", "miguel.santos@forave.pt", "", ["Análise e Visualização de Dados"]),
+    ("Luís Cerejeira", PROFESSOR_PRINCIPAL, "", []),
+    ("Ana Teixeira", "ana.teixeira@forave.pt", "", []),
+    ("Alberto Pereira", "alberto.pereira@forave.pt", "", []),
+    ("Carlos Vicente", "carlos.vicente@forave.pt", "", []),
+    ("José Ramalhoto", "jose.ramalhoto@forave.pt", "", []),
+    ("Nuno Barbosa", "nuno.barbosa@forave.pt", "", []),
+    ("Paulo Cunha", "paulo.cunha@forave.pt", "", []),
+    ("Rui Chilro", "rui.chilro@forave.pt", "", []),
+    ("Stéphanie Dermagne", "stephanie.dermagne@forave.pt", "", []),
+    ("Ricardo Mendes", "ricardo.mendes@forave.pt", "", []),
 ]
+
 
 def _sessoes(datas, horas_cada, n_dadas):
     """
@@ -55,90 +80,111 @@ def _sessoes(datas, horas_cada, n_dadas):
             for i, d in enumerate(datas)]
 
 
-def _data_rel(dias):
-    """
-    Devolve uma data (dd/mm/aaaa) deslocada `dias` a partir de HOJE.
-
-    Porquê: as datas da demo são relativas ao dia em que se semeia, para o
-    curso aparecer sempre "a decorrer" (aulas já dadas + próximas) em vez de
-    datas fixas que envelhecem. Semear perto da defesa dá uma dashboard viva.
-    """
-    return (date.today() + timedelta(days=dias)).strftime("%d/%m/%Y")
-
+# Cronograma do único módulo já em curso (Prof. Cerejeira): 5 aulas de 10h,
+# às quartas-feiras de setembro; as 4 primeiras dadas (40/50h). A última,
+# 30/09/2026, fica POR DAR — é a que se reagenda ao vivo para 14/10/2026.
+_SESSOES_PY = _sessoes(
+    ["02/09/2026", "09/09/2026", "16/09/2026", "23/09/2026", "30/09/2026"], 10, 4
+)
+# Cinco UFCD já DADAS (concluídas), com datas no passado e 100% das horas.
+_SES_ALGO = _sessoes(["03/06/2026", "17/06/2026"], 25, 2)   # 50/50h
+_SES_MAT = _sessoes(["04/06/2026", "18/06/2026"], 25, 2)    # 50/50h
+_SES_LP = _sessoes(["10/06/2026"], 25, 1)                   # 25/25h
+_SES_ETICA = _sessoes(["24/06/2026"], 25, 1)                # 25/25h
+_SES_FOLHA = _sessoes(["08/07/2026"], 25, 1)                # 25/25h
 
 # Módulos: (nome, professor, horas_totais, estado, ufcd, [sessoes]).
-# As horas DADAS já não se escrevem à mão — são a soma das aulas marcadas
-# como dadas (ver _sessoes). Ex.: Python = 5 aulas de 10h, 3 dadas -> 30/50h.
-# Datas ancoradas em HOJE (ver _data_rel): aulas semanais, umas já dadas e
-# outras por vir, para a dashboard e o calendário mostrarem vida.
+# Códigos e horas OFICIAIS (plano EGICD). Só os 6 primeiros têm cronograma
+# (5 já dadas + Python Avançado em curso); os restantes ficam "pendente",
+# listados sem datas (não se inventa calendário de aulas ainda não dadas).
+# "" no ufcd = não consta no plano oficial que encontrei (extra do FORAVE).
 MODULOS = [
-    # Em curso: 5 aulas (−2 a +2 semanas), 3 já dadas -> 30/50h. Duas aulas e
-    # duas avaliações ficam no futuro -> aparecem em "Próximas aulas".
-    ("Programação Avançada com Python", "Luís Cerejeira", 50, "em curso", "10794",
-     _sessoes([_data_rel(-14), _data_rel(-7), _data_rel(0), _data_rel(7), _data_rel(14)], 10, 3)),
-    # Concluído: 4 aulas, todas no passado e dadas -> 40/40h (100%).
-    ("Fundamentos de Bases de Dados", "Rita Fonseca", 40, "concluido", "",
-     _sessoes([_data_rel(-56), _data_rel(-49), _data_rel(-42), _data_rel(-35)], 10, 4)),
-    # Em curso (a começar): 1 aula dada, 3 por vir -> 10/40h (25%).
-    ("Análise e Visualização de Dados", "Miguel Santos", 40, "em curso", "",
-     _sessoes([_data_rel(-7), _data_rel(7), _data_rel(14), _data_rel(21)], 10, 1)),
+    # Em curso (Cerejeira): última aula 30/09 por dar -> reagenda-se ao vivo p/ 14/10.
+    (M_PY_AV, "Luís Cerejeira", 50, "em curso", "10794", _SESSOES_PY),
+    # Cinco UFCD já dadas (concluídas).
+    ("Conceitos Fundamentais de Programação (Algoritmia)", "Luís Cerejeira", 50, "concluido", "9950", _SES_ALGO),
+    ("Matemática", "Nuno Barbosa", 50, "concluido", "5064", _SES_MAT),
+    ("Língua Portuguesa - Escrita de Textos", "Ana Teixeira", 25, "concluido", "5143", _SES_LP),
+    ("Ética e Deontologia Profissionais", "Stéphanie Dermagne", 25, "concluido", "683", _SES_ETICA),
+    ("Folha de Cálculo - Funcionalidades Avançadas", "José Ramalhoto", 25, "concluido", "757", _SES_FOLHA),
+    # Restantes: listadas, sem cronograma (ainda não dadas).
+    ("Transformação de Dados", "Luís Cerejeira", 25, "pendente", "10800", []),
+    ("Gestão e Armazenamento de Dados", "Alberto Pereira", 50, "pendente", "10797", []),
+    ("Princípios da Análise Exploratória de Dados", "Carlos Vicente", 25, "pendente", "10807", []),
+    ("Programação em Python", "Carlos Vicente", 50, "pendente", "10805", []),
+    ("Linguagens de Scripting e Linha de Comandos", "Carlos Vicente", 25, "pendente", "10806", []),
+    ("Estatística Aplicada à Gestão", "José Ramalhoto", 50, "pendente", "2166", []),
+    ("Engenharia de Software", "Paulo Cunha", 25, "pendente", "5409", []),
+    ("Fundamentos de Cibersegurança", "Rui Chilro", 25, "pendente", "9188", []),
+    ("Limpeza e Transformação de Dados em Python", "Rui Chilro", 25, "pendente", "10808", []),
+    ("Visualização de Dados", "José Ramalhoto", 25, "pendente", "10801", []),
+    ("Empresa - Estrutura Organizacional", "Stéphanie Dermagne", 25, "pendente", "7825", []),
+    ("Introdução à Proteção de Dados Pessoais", "Stéphanie Dermagne", 25, "pendente", "10672", []),
 ]
 
-# Aluno de TESTE com email REAL, para verificar a receção dos emails
-# automáticos (nota individual / reagendamento). O nome é fictício; o email
-# é uma caixa de correio de teste (a password dessa caixa NÃO fica aqui —
-# não é precisa: o programa só usa o endereço como destinatário).
-EMAIL_ALUNO_TESTE = "alunoforavecetdados@gmail.com"
-
-# Alunos: (nome, email, [módulos em que está inscrito]) — nomes fictícios.
-# O último é o aluno de TESTE (email real acima).
-ALUNOS = [
-    ("Sofia Marques", "sofia.marques@forave.pt",
-     ["Programação Avançada com Python", "Fundamentos de Bases de Dados"]),
-    ("Tiago Fernandes", "tiago.fernandes@forave.pt",
-     ["Programação Avançada com Python", "Fundamentos de Bases de Dados"]),
-    ("Inês Rocha", "ines.rocha@forave.pt",
-     ["Programação Avançada com Python", "Análise e Visualização de Dados"]),
-    ("Rui Teixeira", EMAIL_ALUNO_TESTE,
-     ["Programação Avançada com Python"]),
+# Turma real (nomes + emails da escola). Todos inscritos no módulo em curso.
+# O último é o aluno de demonstração (email real) — persona "aluno" + emails.
+_TURMA = [
+    ("Ana Silva", "asilvaegicd2527@forave.org"),
+    ("Andres Macias", "amaciasegicd2527@forave.org"),
+    ("André Moreira", "amoreiraegicd2527@forave.org"),
+    ("Cindy Semedo", "csemedoegicd2527@forave.org"),
+    ("Cláudio Machado", "cmachadoegicd2527@forave.org"),
+    ("Clécia Teixeira", "cteixeiraegicd2527@forave.org"),
+    ("Ester Silva", "esilvaegicd2527@forave.org"),
+    ("Gabriela Rodrigues", "grodriguesegicd2527@forave.org"),
+    ("Ítalo Martins", "imartinsegicd2527@forave.org"),
+    ("Jorge Ramos", "jramosegicd2527@forave.org"),
+    ("José Martins", "jmartinsegicd2527@forave.org"),
+    ("Juliana Nunes", "jnunesegicd2527@forave.org"),
+    ("Marcelo Orso", "morsoegicd2527@forave.org"),
+    ("Mário Oliveira", "moliveiraegicd2527@forave.org"),
+    ("Noemi Martins", "nmartinsegicd2527@forave.org"),
+    ("Ricardo Antunes", "rantunesegicd2527@forave.org"),
+    ("Rúben Moreira", "rmoreiraegicd2527@forave.org"),
+    ("Samuel Silva", "ssilvaegicd2527@forave.org"),
+    ("Sérgio Pereira", "spereiraegicd2527@forave.org"),
 ]
 
-# Avaliações por módulo: (data, tipo, descrição, objectivo, deliverables, peso)
+# Alunos (formandos): a turma real + o aluno de demonstração (email real),
+# todos inscritos no módulo em curso.
+ALUNOS = [(nome, email, [M_PY_AV]) for nome, email in _TURMA]
+ALUNOS.append(("Aluno de Demonstração", EMAIL_ALUNO_TESTE, [M_PY_AV]))
+
+# Avaliações do módulo em curso (com pesos -> nota final por média ponderada).
 AVALIACOES = {
-    "Programação Avançada com Python": [
-        (_data_rel(7), "Teste", "Teste 1 — POO e estruturas de dados",
-         "Avaliar os fundamentos de POO", "Prova escrita", 30),
-        (_data_rel(14), "Projeto", "Projeto final",
-         "Aplicar tudo num programa real", "Repositório + demonstração", 50),
-        (_data_rel(14), "Avaliação contínua", "Participação nas aulas",
-         "Empenho e participação", "—", 20),
-    ],
-    "Fundamentos de Bases de Dados": [
-        (_data_rel(-35), "Teste", "Teste global",
-         "Modelo relacional e SQL", "Prova escrita", 100),
+    M_PY_AV: [
+        ("16/09/2026", "Teste", "Teste — POO e estruturas de dados",
+         "Avaliar os fundamentos de POO", "Prova escrita", 20),
+        ("30/09/2026", "Projeto", "Projeto final",
+         "Aplicar tudo num programa real", "Repositório + demonstração", 40),
+        ("23/09/2026", "Avaliação contínua", "Avaliação contínua",
+         "Empenho, participação e trabalho ao longo do módulo", "—", 40),
     ],
 }
 
-# Notas: (módulo, índice da avaliação, email do aluno, nota)
-_PAP = "Programação Avançada com Python"
-_BD = "Fundamentos de Bases de Dados"
+# Notas: (módulo, índice da avaliação, email do aluno, nota). Um subconjunto
+# da turma + o aluno de demonstração, para o lançamento/pauta terem dados.
+# Avaliações: Teste(0), Projeto(1), Participação(2).
 NOTAS = [
-    # Programação Avançada com Python: Teste(0), Projeto(1), Participação(2)
-    (_PAP, 0, "sofia.marques@forave.pt", 16),
-    (_PAP, 1, "sofia.marques@forave.pt", 17),
-    (_PAP, 2, "sofia.marques@forave.pt", 18),
-    (_PAP, 0, "tiago.fernandes@forave.pt", 12),
-    (_PAP, 1, "tiago.fernandes@forave.pt", 14),
-    (_PAP, 2, "tiago.fernandes@forave.pt", 15),
-    (_PAP, 0, "ines.rocha@forave.pt", 9),
-    (_PAP, 1, "ines.rocha@forave.pt", 11),
-    (_PAP, 2, "ines.rocha@forave.pt", 13),
-    (_PAP, 0, EMAIL_ALUNO_TESTE, 14),
-    (_PAP, 1, EMAIL_ALUNO_TESTE, 15),
-    (_PAP, 2, EMAIL_ALUNO_TESTE, 16),
-    # Fundamentos de Bases de Dados: Teste(0)
-    (_BD, 0, "sofia.marques@forave.pt", 15),
-    (_BD, 0, "tiago.fernandes@forave.pt", 13),
+    (M_PY_AV, 0, "amoreiraegicd2527@forave.org", 16),
+    (M_PY_AV, 1, "amoreiraegicd2527@forave.org", 17),
+    (M_PY_AV, 2, "amoreiraegicd2527@forave.org", 18),
+    (M_PY_AV, 0, "jnunesegicd2527@forave.org", 15),
+    (M_PY_AV, 1, "jnunesegicd2527@forave.org", 16),
+    (M_PY_AV, 2, "jnunesegicd2527@forave.org", 17),
+    (M_PY_AV, 0, "morsoegicd2527@forave.org", 13),
+    (M_PY_AV, 1, "morsoegicd2527@forave.org", 14),
+    (M_PY_AV, 2, "morsoegicd2527@forave.org", 15),
+    (M_PY_AV, 0, "asilvaegicd2527@forave.org", 11),
+    (M_PY_AV, 1, "asilvaegicd2527@forave.org", 13),
+    (M_PY_AV, 2, "asilvaegicd2527@forave.org", 14),
+    (M_PY_AV, 0, "grodriguesegicd2527@forave.org", 17),
+    (M_PY_AV, 1, "grodriguesegicd2527@forave.org", 18),
+    (M_PY_AV, 2, "grodriguesegicd2527@forave.org", 19),
+    (M_PY_AV, 0, EMAIL_ALUNO_TESTE, 14),
+    (M_PY_AV, 1, EMAIL_ALUNO_TESTE, 15),
+    (M_PY_AV, 2, EMAIL_ALUNO_TESTE, 16),
 ]
 
 
@@ -153,17 +199,18 @@ def semear(pasta="dados", engine=None):
     gestor = GestorCronograma(pasta_dados=pasta, engine=engine)
     gestor.carregar_dados()  # carrega o que já houver -> só acrescentamos o que falta
 
-    # Professores (registo — o vínculo ao módulo é por nome e por esta lista)
+    # Professores (registo — o vínculo ao módulo é por nome)
     for nome, email, telefone, modulos in PROFESSORES:
         if gestor.procurar_professor_por_email(email) is None:
             gestor.adicionar_professor(nome, email, telefone, modulos)
 
-    # Módulos (com sessões: data + horas + "dada"). As horas dadas resultam
-    # da soma das aulas marcadas como dadas (definir_sessoes, via editar_modulo).
+    # Módulos. Só se define cronograma (sessões) quando há sessões — os
+    # módulos "pendente" ficam sem datas (horas dadas = 0).
     for nome, prof, h_tot, estado, ufcd, sessoes in MODULOS:
         if not gestor.modulo_existe(nome):
             gestor.adicionar_modulo(nome, prof, h_tot, 0, estado, [], ufcd=ufcd)
-            gestor.editar_modulo(nome, sessoes=sessoes)
+            if sessoes:
+                gestor.editar_modulo(nome, sessoes=sessoes)
 
     # Alunos (formandos)
     for nome, email, modulos in ALUNOS:
@@ -185,12 +232,13 @@ def semear(pasta="dados", engine=None):
 
 
 def semear_contas(pasta="dados", engine=None):
-    """Cria as contas de acesso (coordenador, professor, alunos)."""
+    """Cria as contas de acesso (coordenador, professor, aluno de demo)."""
     auth = GestorAutenticacao(caminho=os.path.join(pasta, "utilizadores.json"), engine=engine)
-    contas = [(COORDENADOR, "coordenador")]
-    contas.append((PROFESSOR_PRINCIPAL, "professor"))
-    for _nome, email, _modulos in ALUNOS:
-        contas.append((email, "aluno"))
+    contas = [
+        (COORDENADOR, "coordenador"),
+        (PROFESSOR_PRINCIPAL, "professor"),
+        (EMAIL_ALUNO_TESTE, "aluno"),
+    ]
     for email, papel in contas:
         auth.registar(email, PASSWORD_DEMO, papel)  # devolve None se já existir
     return [c[0] for c in contas]
@@ -217,7 +265,7 @@ def garantir_env():
 def main():
     pasta = sys.argv[1] if len(sys.argv) > 1 else "dados"
     print("=" * 56)
-    print("  A SEMEAR DADOS DE DEMONSTRAÇÃO")
+    print("  A SEMEAR DADOS DE DEMONSTRAÇÃO (curso EGICD real)")
     print("=" * 56)
     print(f"  Pasta de dados: {pasta}/")
 
@@ -234,9 +282,9 @@ def main():
     print("  ENTRAR:")
     print(f"    Coordenador: {COORDENADOR}")
     print(f"    Professor:   {PROFESSOR_PRINCIPAL}")
-    print("    Alunos:      sofia.marques@forave.pt · tiago.fernandes@forave.pt · ines.rocha@forave.pt")
-    print(f"    Aluno TESTE: {EMAIL_ALUNO_TESTE}  (email real — verifica aqui os avisos automáticos)")
+    print(f"    Aluno:       {EMAIL_ALUNO_TESTE}  (email real — persona aluno + avisos)")
     print()
+    print("  Importar ao vivo: importar_modulos_demo.csv (Inglês Técnico / Ricardo Mendes)")
     print("  Agora corre a WEB:  python app.py    (http://127.0.0.1:5000)")
     print("  ou o TERMINAL:      python main.py")
     print("=" * 56)
