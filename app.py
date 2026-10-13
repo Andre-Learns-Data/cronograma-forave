@@ -24,8 +24,10 @@ import json
 import os
 import tempfile
 import time
+from datetime import datetime
 from functools import wraps
 from io import BytesIO, StringIO
+from xml.sax.saxutils import escape as _xml_escape
 
 from flask import (
     Flask,
@@ -2513,6 +2515,174 @@ def gerar_relatorio_pdf(gestor):
     doc.build(elementos)
     buffer.seek(0)
     return buffer
+
+
+def gerar_pauta_pdf(gestor, modulo_nome):
+    """
+    Pauta (PDF) de UM módulo: cabeçalho + alunos inscritos × avaliações +
+    nota final (média ponderada). Tem notas (dados pessoais) — a rota que a
+    serve é escopada (coordenador / professor do módulo). None se não existir.
+    """
+    mod = gestor.procurar_modulo(modulo_nome)
+    if mod is None:
+        return None
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=landscape(A4),
+        rightMargin=0.6 * cm, leftMargin=0.6 * cm,
+        topMargin=0.6 * cm, bottomMargin=0.6 * cm)
+    estilos = getSampleStyleSheet()
+    estilo_titulo = ParagraphStyle(
+        'PautaTit', parent=estilos['Heading1'], fontSize=15,
+        textColor=colors.HexColor('#0d4a30'), spaceAfter=2, alignment=0)
+    estilo_sub = ParagraphStyle(
+        'PautaSub', parent=estilos['Normal'], fontSize=9,
+        textColor=colors.HexColor('#5a6b62'), spaceAfter=10)
+    elementos = [Paragraph(f"<b>Pauta — {_xml_escape(mod.nome)}</b>", estilo_titulo)]
+    ufcd = f"UFCD {mod.ufcd} · " if mod.ufcd else ""
+    elementos.append(Paragraph(
+        f"{ufcd}Prof. {_xml_escape(mod.professor)} · "
+        f"{mod.horas_dadas}/{mod.horas_totais}h · {mod.estado} · "
+        f"gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')} — FORAVE",
+        estilo_sub))
+
+    cabecalho = ["Aluno"]
+    for av in mod.avaliacoes:
+        peso = f"\n({av.peso}%)" if av.peso is not None else ""
+        cabecalho.append(f"{av.descricao}{peso}")
+    cabecalho.append("Nota final")
+
+    tabela = [cabecalho]
+    inscritos = [f for f in gestor.formandos if f.esta_inscrito(mod.nome)]
+    inscritos.sort(key=lambda fo: fo.nome.lower())
+    for f in inscritos:
+        linha = [f.nome]
+        for av in mod.avaliacoes:
+            n = av.obter_nota(f.email)
+            linha.append(str(n) if n is not None else "—")
+        nf = mod.nota_final(f.email)
+        linha.append(str(nf) if nf is not None else "—")
+        tabela.append(linha)
+    if len(tabela) == 1:
+        tabela.append(["Sem alunos inscritos"] + ["—"] * (len(cabecalho) - 1))
+
+    n_av = len(mod.avaliacoes)
+    if n_av > 0:
+        col_widths = [6 * cm] + [(19.0 / n_av) * cm] * n_av + [2.6 * cm]
+    else:
+        col_widths = [6 * cm, 2.6 * cm]
+    t = Table(tabela, colWidths=col_widths, repeatRows=1)
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#196141')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (-1, 1), (-1, -1), 'Helvetica-Bold'),
+        ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('TOPPADDING', (0, 0), (-1, 0), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#eef4f1')]),
+    ]))
+    elementos.append(t)
+    doc.build(elementos)
+    buffer.seek(0)
+    return buffer
+
+
+def gerar_auditoria_pdf(registos):
+    """
+    Registo de alterações (PDF) — documento oficial para auditoria: cabeçalho
+    com data de geração + tabela (data/hora, autor, ação, detalhe). O CSV
+    continua a existir para análise; este é a versão prova/arquivo.
+    """
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=landscape(A4),
+        rightMargin=0.6 * cm, leftMargin=0.6 * cm,
+        topMargin=0.6 * cm, bottomMargin=0.6 * cm)
+    estilos = getSampleStyleSheet()
+    estilo_titulo = ParagraphStyle(
+        'AudTit', parent=estilos['Heading1'], fontSize=15,
+        textColor=colors.HexColor('#0d4a30'), spaceAfter=2, alignment=0)
+    estilo_sub = ParagraphStyle(
+        'AudSub', parent=estilos['Normal'], fontSize=9,
+        textColor=colors.HexColor('#5a6b62'), spaceAfter=10)
+    estilo_cel = ParagraphStyle(
+        'AudCel', parent=estilos['Normal'], fontSize=8, leading=10)
+    elementos = [
+        Paragraph("<b>Registo de alterações — FORAVE</b>", estilo_titulo),
+        Paragraph(
+            f"Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')} · "
+            f"{len(registos)} registo(s) · Gestor de Cronograma FORAVE",
+            estilo_sub),
+    ]
+    tabela = [["Data/hora", "Autor", "Ação", "Detalhe"]]
+    for e in registos:
+        tabela.append([
+            Paragraph(_xml_escape(str(e.get("data_hora", ""))), estilo_cel),
+            Paragraph(_xml_escape(str(e.get("autor", ""))), estilo_cel),
+            Paragraph(_xml_escape(str(e.get("accao", ""))), estilo_cel),
+            Paragraph(_xml_escape(str(e.get("detalhe", ""))), estilo_cel),
+        ])
+    if len(tabela) == 1:
+        tabela.append([Paragraph("Sem registos", estilo_cel), "", "", ""])
+    t = Table(tabela, colWidths=[3.5 * cm, 5.5 * cm, 4 * cm, 15.5 * cm],
+              repeatRows=1)
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#196141')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('TOPPADDING', (0, 0), (-1, 0), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#eef4f1')]),
+    ]))
+    elementos.append(t)
+    doc.build(elementos)
+    buffer.seek(0)
+    return buffer
+
+
+@app.route('/admin/pauta.pdf')
+@apenas_staff
+def admin_pauta_pdf():
+    """
+    Pauta (PDF) de um módulo. Escopada: coordenador qualquer módulo; professor
+    só os seus. Tem notas (dados pessoais) — nunca acessível a um aluno.
+    """
+    modulo = request.args.get('modulo', '').strip()
+    gestor = carregar_gestor()
+    if gestor.procurar_modulo(modulo) is None:
+        flash('Módulo inválido.', 'erro')
+        return redirect(url_for('admin'))
+    if not pode_gerir_modulo(gestor, modulo):
+        flash('Só pode gerar a pauta dos seus módulos.', 'erro')
+        return redirect(url_for('admin'))
+    try:
+        pdf = gerar_pauta_pdf(gestor, modulo)
+        return send_file(pdf, mimetype='application/pdf', as_attachment=True,
+                         download_name=f'pauta_{_slug_ficheiro(modulo)}.pdf')
+    except Exception as erro:
+        flash(f'Não foi possível gerar a pauta: {erro}', 'erro')
+        return redirect(url_for('admin'))
+
+
+@app.route('/admin/auditoria.pdf')
+@apenas_coordenador
+def admin_auditoria_pdf():
+    """Registo de alterações completo em PDF (para auditoria). Só coordenador."""
+    try:
+        registos = ler_auditoria(limite=None)
+        pdf = gerar_auditoria_pdf(registos)
+        return send_file(pdf, mimetype='application/pdf', as_attachment=True,
+                         download_name='registo_alteracoes.pdf')
+    except Exception as erro:
+        flash(f'Não foi possível gerar o PDF do registo: {erro}', 'erro')
+        return redirect(url_for('admin'))
 
 
 # ============================================================

@@ -353,6 +353,11 @@
                 <span class="text-muted small ms-2"><i class="bi bi-chevron-down"></i> clicar para editar · cronograma · avaliações · notas</span>
             </summary>
             <div class="card-body">
+                <div class="d-flex justify-content-end mb-2">
+                    <a href="{{ url_for('admin_pauta_pdf', modulo=m.nome) }}" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-file-earmark-pdf me-1"></i>Pauta (PDF)
+                    </a>
+                </div>
                 <!-- Editar módulo (campos pré-preenchidos; o nome é a chave e não muda) -->
                 <h6>Editar módulo</h6>
                 <form method="POST" action="{{ url_for('admin_editar_modulo') }}" class="row g-2 mb-3">
@@ -822,6 +827,9 @@
             </a>
             <a href="{{ url_for('admin_auditoria_csv') }}" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-download me-1"></i>Descarregar registo completo (CSV)
+            </a>
+            <a href="{{ url_for('admin_auditoria_pdf') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-file-earmark-pdf me-1"></i>Registo (PDF, p/ auditoria)
             </a>
         </div>
         <p class="text-muted small mb-2">
