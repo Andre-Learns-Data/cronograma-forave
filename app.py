@@ -58,6 +58,7 @@ from classes.gerador_qr import gerar_qr_bytes
 from classes.google_sheets import GoogleSheetsSync
 from classes.importador_csv import ImportadorCSV
 from classes.insights_engine import InsightsEngine
+from classes.token_aluno import criar_token_aluno, validar_token_aluno
 from classes.token_modulo import criar_token_modulo, validar_token_modulo
 from classes.validacao import email_valido
 from gestor_cronograma import GestorCronograma
@@ -773,6 +774,84 @@ def qr_login():
     para o telemóvel. Não expõe dados — cai no ecrã de entrada.
     """
     url = url_for('login', _external=True)
+    return Response(gerar_qr_bytes(url), mimetype='image/png')
+
+
+@app.route('/qr-app.png')
+def qr_app():
+    """
+    QR que aponta para a LANDING (o site). Serve para ABRIR A APP no telemóvel:
+    apontar a câmara abre o site, sem escrever o endereço. A landing tem o
+    manifesto, por isso o botão "Instalar" aparece logo. (Diferente do QR do
+    calendário, que descarrega o .ics.)
+    """
+    url = url_for('landing', _external=True)
+    return Response(gerar_qr_bytes(url), mimetype='image/png')
+
+
+@app.route('/aluno.ics')
+def aluno_ics():
+    """
+    .ics PESSOAL do aluno — só os módulos em que está inscrito.
+
+    Dois caminhos de entrada (igual ao /modulo.ics):
+      - ?t=<token> -> token assinado que carrega o EMAIL (o QR da área do
+                      aluno usa isto). Funciona sem sessão, para a câmara do
+                      telemóvel abrir o link. Expira (30 dias) e não é
+                      falsificável (assinado com a chave da app).
+      - sem token  -> pela sessão iniciada (o botão dentro da área do aluno).
+
+    Porquê filtrar por aluno: o /cronograma.ics traz o curso TODO; aqui o
+    aluno leva só o SEU percurso (os módulos em que está inscrito). O .ics
+    leva apenas datas de aulas/avaliações — NÃO leva notas (essas ficam só
+    na área autenticada, RGPD). É mais um canal da mesma lógica de domínio.
+    """
+    token = request.args.get('t', '')
+    if token:
+        email = validar_token_aluno(token, app.secret_key)
+        if email is None:
+            abort(403)  # token corrompido, falsificado ou expirado
+    else:
+        # Sem token -> tem de haver sessão (o botão dentro da área do aluno)
+        if utilizador_actual() is None:
+            flash("Inicia sessão para continuares.", "erro")
+            return redirect(url_for("login"))
+        email = session.get("email", "")
+
+    gestor = carregar_gestor()
+
+    # Encontrar o formando pelo email e ficar só com os módulos dele
+    # (mesmo padrão for+if de dados_aluno). Se o email não corresponder a
+    # nenhum formando, a lista fica vazia e o .ics sai sem eventos.
+    formando = None
+    for f in gestor.formandos:
+        if f.email == email:
+            formando = f
+    modulos = [m for m in gestor.modulos
+               if formando is not None and formando.esta_inscrito(m.nome)]
+
+    conteudo = gerar_ics(modulos)
+    return Response(
+        conteudo,
+        mimetype='text/calendar',
+        headers={'Content-Disposition': 'attachment; filename="o-meu-horario.ics"'},
+    )
+
+
+@app.route('/aluno/qr.png')
+@login_obrigatorio
+def aluno_qr():
+    """
+    QR code (PNG) do calendário PESSOAL do aluno. É MOSTRADO só a quem já
+    está autenticado na sua área, mas o link que ele contém leva um token
+    assinado com o email — assim, quando o aluno aponta a câmara do
+    telemóvel, o /aluno.ics abre sem pedir login (ver aluno_ics) e traz só
+    os módulos dele. Ponte ecrã→telemóvel do percurso de cada aluno. O PNG
+    é gerado em memória.
+    """
+    email = session.get("email", "")
+    token = criar_token_aluno(email, app.secret_key)
+    url = url_for('aluno_ics', t=token, _external=True)
     return Response(gerar_qr_bytes(url), mimetype='image/png')
 
 
@@ -2683,6 +2762,160 @@ def admin_auditoria_pdf():
     except Exception as erro:
         flash(f'Não foi possível gerar o PDF do registo: {erro}', 'erro')
         return redirect(url_for('admin'))
+
+
+def _data_ordenavel(d):
+    """dd/mm/aaaa -> aaaa-mm-dd (para ordenar cronologicamente)."""
+    partes = str(d).split('/')
+    if len(partes) == 3:
+        return f"{partes[2]}-{partes[1].zfill(2)}-{partes[0].zfill(2)}"
+    return "9999-99-99"
+
+
+def _eventos_curso(gestor):
+    """Todos os eventos do curso (aulas + avaliações com data). Sem dados pessoais."""
+    eventos = []
+    for m in gestor.modulos:
+        for s in m.sessoes:
+            if s.get("data"):
+                eventos.append({"data": s["data"], "tipo": "aula",
+                                "titulo": m.nome, "horas": s.get("horas", 0),
+                                "realizada": bool(s.get("realizada"))})
+        for av in m.avaliacoes:
+            if av.data:
+                eventos.append({"data": av.data, "tipo": "avaliacao",
+                                "titulo": f"{m.nome} — {av.descricao or av.tipo}"})
+    return eventos
+
+
+def _tabela_horario(eventos):
+    """Tabela reportlab (cronológica) de aulas e avaliações — partilhada pelo
+    horário público e pelo resumo do aluno."""
+    est_cel = ParagraphStyle('Hc', parent=getSampleStyleSheet()['Normal'],
+                             fontSize=9, leading=12)
+    evs = sorted(eventos, key=lambda e: _data_ordenavel(e.get("data", "")))
+    tabela = [["Data", "Tipo", "Módulo / Descrição", "Horas"]]
+    for e in evs:
+        if e.get("tipo") == "avaliacao":
+            tipo, horas = "Avaliação", "—"
+        else:
+            tipo = "Aula ✓" if e.get("realizada") else "Aula"
+            horas = f"{e.get('horas', 0)}h"
+        tabela.append([e.get("data", ""), tipo,
+                       Paragraph(_xml_escape(str(e.get("titulo", ""))), est_cel), horas])
+    if len(tabela) == 1:
+        tabela.append(["—", "—", Paragraph("Sem aulas ou avaliações agendadas", est_cel), "—"])
+    t = Table(tabela, colWidths=[2.6 * cm, 2.6 * cm, 10.5 * cm, 1.8 * cm], repeatRows=1)
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#196141')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('TOPPADDING', (0, 0), (-1, 0), 7),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 7),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#eef4f1')]),
+    ]))
+    return t
+
+
+def _doc_pdf_a4(buffer):
+    return SimpleDocTemplate(buffer, pagesize=A4, rightMargin=1.2 * cm,
+                             leftMargin=1.2 * cm, topMargin=1.2 * cm,
+                             bottomMargin=1.2 * cm)
+
+
+def gerar_horario_pdf(titulo, eventos, subtitulo=""):
+    """Horário (PDF) — lista cronológica de aulas e avaliações."""
+    buffer = BytesIO()
+    doc = _doc_pdf_a4(buffer)
+    estilos = getSampleStyleSheet()
+    est_tit = ParagraphStyle('Ht', parent=estilos['Heading1'], fontSize=15,
+                             textColor=colors.HexColor('#0d4a30'), spaceAfter=2)
+    est_sub = ParagraphStyle('Hs', parent=estilos['Normal'], fontSize=9,
+                             textColor=colors.HexColor('#5a6b62'), spaceAfter=10)
+    rodape = (subtitulo + " · " if subtitulo else "")
+    doc.build([
+        Paragraph(f"<b>{_xml_escape(titulo)}</b>", est_tit),
+        Paragraph(rodape + f"gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')} — FORAVE", est_sub),
+        _tabela_horario(eventos),
+    ])
+    buffer.seek(0)
+    return buffer
+
+
+def gerar_resumo_aluno_pdf(dados):
+    """Resumo do aluno (PDF) para dar aos pais: horário + notas até ao momento
+    (com nota final). Dados do próprio aluno — não é a pauta oficial."""
+    buffer = BytesIO()
+    doc = _doc_pdf_a4(buffer)
+    estilos = getSampleStyleSheet()
+    est_tit = ParagraphStyle('Rt', parent=estilos['Heading1'], fontSize=15,
+                             textColor=colors.HexColor('#0d4a30'), spaceAfter=2)
+    est_sub = ParagraphStyle('Rs', parent=estilos['Normal'], fontSize=9,
+                             textColor=colors.HexColor('#5a6b62'), spaceAfter=8)
+    est_h2 = ParagraphStyle('Rh2', parent=estilos['Heading2'], fontSize=12,
+                            textColor=colors.HexColor('#196141'),
+                            spaceBefore=12, spaceAfter=4)
+    est_mod = ParagraphStyle('Rm', parent=estilos['Normal'], fontSize=10,
+                             spaceBefore=6, spaceAfter=2)
+    elementos = [
+        Paragraph(f"<b>Resumo do aluno — {_xml_escape(dados['nome'])}</b>", est_tit),
+        Paragraph(f"Horário e notas até {datetime.now().strftime('%d/%m/%Y')} — "
+                  f"Gestor de Cronograma FORAVE", est_sub),
+        Paragraph("Horário", est_h2),
+        _tabela_horario(dados.get("eventos", [])),
+        Paragraph("Notas até ao momento", est_h2),
+    ]
+    for m in dados.get("modulos", []):
+        nf = m.get("nota_final")
+        nf_txt = str(nf) if nf is not None else "—"
+        elementos.append(Paragraph(
+            f"<b>{_xml_escape(m['nome'])}</b> — nota final: <b>{nf_txt}</b>", est_mod))
+        tab = [["Avaliação", "Peso", "Nota"]]
+        for av in m.get("avaliacoes", []):
+            peso = f"{av['peso']}%" if av.get("peso") is not None else "—"
+            nota = str(av["nota"]) if av.get("nota") is not None else "—"
+            tab.append([av.get("descricao", ""), peso, nota])
+        if len(tab) == 1:
+            tab.append(["Sem avaliações", "—", "—"])
+        t = Table(tab, colWidths=[11 * cm, 2.5 * cm, 2.5 * cm], repeatRows=1)
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2f8f63')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#eef4f1')]),
+        ]))
+        elementos.append(t)
+    doc.build(elementos)
+    buffer.seek(0)
+    return buffer
+
+
+@app.route('/horario.pdf')
+def horario_pdf():
+    """Horário do curso em PDF (PÚBLICO — só aulas e avaliações, sem notas)."""
+    gestor = carregar_gestor()
+    pdf = gerar_horario_pdf("Horário do curso — FORAVE", _eventos_curso(gestor),
+                            "Aulas e avaliações do curso")
+    return send_file(pdf, mimetype='application/pdf', as_attachment=True,
+                     download_name='horario_curso.pdf')
+
+
+@app.route('/aluno/resumo.pdf')
+@login_obrigatorio
+def aluno_resumo_pdf():
+    """Resumo do aluno (horário + notas) em PDF — para partilhar/dar aos pais.
+    Só os dados do próprio aluno autenticado (RGPD)."""
+    gestor = carregar_gestor()
+    dados = dados_aluno(gestor, session.get("email", ""))
+    pdf = gerar_resumo_aluno_pdf(dados)
+    return send_file(pdf, mimetype='application/pdf', as_attachment=True,
+                     download_name='o_meu_horario_e_notas.pdf')
 
 
 # ============================================================

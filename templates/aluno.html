@@ -47,8 +47,11 @@
                     <hr class="my-3">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
                         <div>
-                            <a href="{{ url_for('cronograma_ics') }}" class="btn btn-sm btn-outline-success">
+                            <a href="{{ url_for('aluno_ics') }}" class="btn btn-sm btn-outline-success">
                                 <i class="bi bi-calendar-plus me-1"></i>Adicionar ao meu telemóvel (.ics)
+                            </a>
+                            <a href="{{ url_for('aluno_resumo_pdf') }}" class="btn btn-sm btn-outline-secondary ms-1">
+                                <i class="bi bi-file-earmark-pdf me-1"></i>Horário + notas (PDF, p/ os pais)
                             </a>
                             <div class="small text-muted mt-1">
                                 Descarrega e abre o ficheiro para juntar as aulas ao calendário do
@@ -56,9 +59,9 @@
                             </div>
                         </div>
                         <div class="text-center">
-                            <img src="{{ url_for('qr_cronograma') }}" alt="QR para adicionar o cronograma ao calendário"
+                            <img src="{{ url_for('aluno_qr') }}" alt="QR para adicionar o meu calendário ao telemóvel"
                                  width="104" height="104" style="border:1px solid #e2e8e5; border-radius:6px; padding:3px; background:#fff;">
-                            <div class="small text-muted">Aponta a câmara</div>
+                            <div class="small text-muted">Aponta a câmara<br>(só os teus módulos)</div>
                         </div>
                     </div>
                 </div>

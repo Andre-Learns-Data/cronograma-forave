@@ -185,11 +185,20 @@
                             <a href="{{ url_for('cronograma_ics') }}" class="btn btn-primary btn-sm">
                                 <i class="bi bi-calendar-plus me-1"></i>Adicionar ao calendário (.ics)
                             </a>
+                            <a href="{{ url_for('horario_pdf') }}" class="btn btn-outline-primary btn-sm ms-1">
+                                <i class="bi bi-file-earmark-pdf me-1"></i>Horário em PDF
+                            </a>
                         </div>
                         <div class="text-center">
-                            <img src="{{ url_for('qr_cronograma') }}" alt="QR do cronograma do curso" width="130" height="130">
+                            <img src="{{ url_for('qr_app') }}" alt="QR para abrir a app no telemóvel" width="118" height="118">
                             <div class="rodape mt-1" style="max-width: 150px;">
-                                <i class="bi bi-phone me-1"></i>Aponta a câmara para levar tudo para o telemóvel.
+                                <i class="bi bi-phone me-1"></i>Aponta para <strong>abrir a app</strong> no telemóvel.
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <img src="{{ url_for('qr_cronograma') }}" alt="QR para adicionar o calendário" width="118" height="118">
+                            <div class="rodape mt-1" style="max-width: 150px;">
+                                <i class="bi bi-calendar-plus me-1"></i>Aponta para adicionar o <strong>calendário</strong>.
                             </div>
                         </div>
                     </div>
