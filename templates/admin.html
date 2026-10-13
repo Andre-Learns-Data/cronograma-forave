@@ -120,6 +120,37 @@
           {% endif %}
         {% endwith %}
 
+        <!-- Relatório detalhado da última importação CSV (linhas recusadas).
+             O resumo já vai no flash acima; aqui mostra-se QUAIS linhas
+             falharam e PORQUÊ (o detalhe que o importador calcula). -->
+        {% if relatorio_import and relatorio_import.erros > 0 %}
+          <div class="alert alert-warning py-2">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                <strong>Relatório de importação ({{ relatorio_import.tipo }}):</strong>
+                {{ relatorio_import.importados }} importado(s),
+                {{ relatorio_import.saltados }} já existiam,
+                <strong>{{ relatorio_import.erros }} com erro</strong> (não entraram).
+              </div>
+              <a href="{{ url_for('admin_relatorio_importacao_limpar') }}"
+                 class="btn-close ms-2" aria-label="Dispensar"></a>
+            </div>
+            <details class="mt-2">
+              <summary style="cursor:pointer">Ver as linhas que falharam e porquê</summary>
+              <ul class="mb-2 mt-2">
+                {% for msg in relatorio_import.erros_detalhe %}
+                  <li><code>{{ msg }}</code></li>
+                {% endfor %}
+              </ul>
+            </details>
+            <a href="{{ url_for('admin_relatorio_importacao_csv') }}"
+               class="btn btn-outline-secondary btn-sm mt-1">
+              <i class="bi bi-filetype-csv me-1"></i>Descarregar relatório de importação (CSV)
+            </a>
+          </div>
+        {% endif %}
+
         <!-- ============ Secção: Visão geral ============ -->
         <section class="app-sec" data-sec="visao" id="sec-visao">
         <h2 class="app-sec-titulo h4"><i class="bi bi-grid-1x2-fill me-2"></i>Visão geral</h2>

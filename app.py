@@ -1222,7 +1222,8 @@ def admin():
     # O registo de alterações é uma visão de coordenação (e o detalhe das
     # notas de OUTROS módulos é dado pessoal) — só o coordenador o vê.
     auditoria = ler_auditoria(limite=50) if papel == "coordenador" else []
-    return render_template('admin.html', dados=dados, auditoria=auditoria, papel=papel)
+    return render_template('admin.html', dados=dados, auditoria=auditoria, papel=papel,
+                           relatorio_import=session.get('relatorio_importacao'))
 
 
 @app.route('/admin/auditoria.csv')
@@ -1384,6 +1385,32 @@ def admin_adicionar_modulo():
     return redirect(url_for('admin'))
 
 
+def _guardar_relatorio_importacao(tipo, resumo):
+    """
+    Guarda o resultado da última importação CSV na sessão.
+
+    A mensagem-resumo (flash) só diz "X importados, Y já existiam, Z erros". O
+    importador, porém, devolve também `erros_detalhe` — uma lista com o número
+    da linha e o motivo de cada linha recusada. Guardamos tudo na sessão para
+    (a) o painel de detalhe no /admin e (b) o descarregar em CSV, em vez de
+    deitar fora informação que já foi calculada (o terminal já a mostra).
+
+    O detalhe é limitado a 50 ocorrências para não inchar o cookie de sessão —
+    mais do que suficiente para um CSV de turma; acima disso, fica a contagem.
+    """
+    detalhe = list(resumo.get('erros_detalhe', []))
+    if len(detalhe) > 50:
+        restantes = len(detalhe) - 50
+        detalhe = detalhe[:50] + [f'... (+{restantes} outra(s) ocorrência(s))']
+    session['relatorio_importacao'] = {
+        'tipo': tipo,
+        'importados': resumo.get('importados', 0),
+        'saltados': resumo.get('saltados', 0),
+        'erros': resumo.get('erros', 0),
+        'erros_detalhe': detalhe,
+    }
+
+
 @app.route('/admin/importar_csv', methods=['POST'])
 @apenas_coordenador
 def admin_importar_csv():
@@ -1430,6 +1457,7 @@ def admin_importar_csv():
                            f"{resumo['importados']} módulo(s) importado(s), "
                            f"{resumo['saltados']} saltado(s), {resumo['erros']} erro(s)")
 
+    _guardar_relatorio_importacao('módulos', resumo)
     categoria = 'ok' if resumo['erros'] == 0 else 'erro'
     flash(f"Importação: {resumo['importados']} importado(s), "
           f"{resumo['saltados']} já existiam, {resumo['erros']} erro(s).", categoria)
@@ -1480,6 +1508,7 @@ def _processar_import_csv(importar_fn, sincronizar_fn, rotulo):
                            f"{resumo['importados']} {rotulo}(s) importado(s), "
                            f"{resumo['saltados']} saltado(s), {resumo['erros']} erro(s)")
 
+    _guardar_relatorio_importacao(rotulo + 's', resumo)
     categoria = 'ok' if resumo['erros'] == 0 else 'erro'
     flash(f"Importação: {resumo['importados']} importado(s), "
           f"{resumo['saltados']} já existiam, {resumo['erros']} erro(s).", categoria)
@@ -1513,6 +1542,50 @@ def admin_importar_csv_professores():
         lambda caminho, gestor: ImportadorCSV().importar_professores(caminho, gestor),
         lambda gsheets, gestor: gsheets.sincronizar_professores(gestor.professores),
         'professor')
+
+
+@app.route('/admin/relatorio_importacao.csv')
+@apenas_coordenador
+def admin_relatorio_importacao_csv():
+    """
+    Descarrega o relatório da última importação CSV.
+
+    Inclui o resumo (importados / já existiam / erros) e, linha a linha, as
+    ocorrências que falharam — com o número da linha e o motivo. É o mesmo
+    detalhe que o painel mostra no ecrã, mas arquivável fora do sistema.
+    """
+    rel = session.get('relatorio_importacao')
+    if not rel:
+        flash('Não há nenhuma importação recente para exportar.', 'erro')
+        return redirect(url_for('admin'))
+
+    import csv
+    buffer = StringIO()
+    escritor = csv.writer(buffer)
+    escritor.writerow(['relatorio_importacao', rel.get('tipo', '')])
+    escritor.writerow(['importados', rel.get('importados', 0)])
+    escritor.writerow(['ja_existiam', rel.get('saltados', 0)])
+    escritor.writerow(['erros', rel.get('erros', 0)])
+    escritor.writerow([])
+    escritor.writerow(['ocorrencia'])
+    for msg in rel.get('erros_detalhe', []):
+        escritor.writerow([msg])
+
+    conteudo = "﻿" + buffer.getvalue()   # BOM para o Excel abrir acentos
+    return Response(
+        conteudo,
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition":
+                 'attachment; filename="relatorio_importacao.csv"'},
+    )
+
+
+@app.route('/admin/relatorio_importacao/limpar')
+@apenas_coordenador
+def admin_relatorio_importacao_limpar():
+    """Dispensa o painel do resultado da última importação (limpa a sessão)."""
+    session.pop('relatorio_importacao', None)
+    return redirect(url_for('admin'))
 
 
 @app.route('/admin/professor', methods=['POST'])
