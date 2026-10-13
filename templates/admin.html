@@ -345,7 +345,10 @@
             <summary>
                 <span class="mod-titulo">{{ m.nome }}</span>
                 {% if m.ufcd %}<small class="text-muted">({{ m.ufcd }})</small>{% endif %}
-                <span class="badge bg-secondary ms-2">{{ m.estado or '—' }}</span>
+                <span class="badge ms-2
+                    {% if m.estado == 'concluido' %}badge-concluido
+                    {% elif m.estado == 'em curso' %}badge-em-curso
+                    {% else %}badge-pendente{% endif %}">{{ m.estado or '—' }}</span>
                 <span class="text-muted small ms-2">{{ m.horas_dadas }}/{{ m.horas_totais }}h · {{ m.percentagem }}%</span>
                 <span class="text-muted small ms-2"><i class="bi bi-chevron-down"></i> clicar para editar · cronograma · avaliações · notas</span>
             </summary>
@@ -772,6 +775,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label mb-0 small">Módulos inscritos</label>
+                        <div class="form-text small mt-0 mb-1">Marca os módulos em que o formando fica inscrito.</div>
                         <div class="border rounded p-2" style="max-height:120px; overflow:auto;">
                           {% if dados.modulos %}
                             {% for m in dados.modulos %}

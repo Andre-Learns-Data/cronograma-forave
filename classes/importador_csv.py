@@ -136,8 +136,20 @@ class ImportadorCSV:
                     continue
 
                 professor = linha["professor"].strip()
-                horas_totais = int(linha["horas_totais"])
-                horas_dadas = int(linha["horas_dadas"])
+
+                # Validar as horas ANTES de converter, para dar uma mensagem
+                # legível ("horas inválidas") em vez da exceção crua do int().
+                h_tot_txt = (linha.get("horas_totais") or "").strip()
+                h_dad_txt = (linha.get("horas_dadas") or "").strip()
+                if not h_tot_txt.isdigit() or not h_dad_txt.isdigit():
+                    mau = h_tot_txt if not h_tot_txt.isdigit() else h_dad_txt
+                    resumo["erros"] = resumo["erros"] + 1
+                    resumo["erros_detalhe"].append(
+                        f"Linha {numero_linha}: horas inválidas — "
+                        f"'{mau}' não é um número")
+                    continue
+                horas_totais = int(h_tot_txt)
+                horas_dadas = int(h_dad_txt)
                 estado = linha["estado"].strip()
 
                 # Coluna 'ufcd' é opcional — se o CSV não a tiver, fica ""
