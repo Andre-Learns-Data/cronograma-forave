@@ -2590,7 +2590,7 @@ def gerar_relatorio_pdf(gestor):
     estilos = getSampleStyleSheet()
     estilo_titulo = ParagraphStyle(
         'TituloRelatorio', parent=estilos['Heading1'],
-        fontSize=16, textColor=colors.HexColor('#667eea'),
+        fontSize=16, textColor=colors.HexColor('#196141'),  # verde FORAVE
         spaceAfter=12, alignment=1
     )
 
@@ -2613,14 +2613,14 @@ def gerar_relatorio_pdf(gestor):
 
     t = Table(tabela_modulos, colWidths=[2 * cm, 6 * cm, 5 * cm, 4 * cm, 3 * cm, 4 * cm])
     t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#196141')),  # verde FORAVE
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 9),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f0f0f0')])
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#eef4f1')])
     ]))
     elementos.append(t)
 
@@ -2644,14 +2644,14 @@ def gerar_relatorio_pdf(gestor):
 
     t2 = Table(tabela_av, colWidths=[6 * cm, 3 * cm, 3 * cm, 9 * cm, 2 * cm])
     t2.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#764ba2')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0d4a30')),  # verde escuro FORAVE
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 9),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f0f0f0')])
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#eef4f1')])
     ]))
     elementos.append(t2)
 
