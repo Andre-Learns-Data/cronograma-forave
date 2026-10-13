@@ -6,8 +6,7 @@
     <title>Gestor de Cronograma — FORAVE</title>
 
     <!-- PWA: instalável no telemóvel (a landing é a "casca" pública) -->
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <meta name="theme-color" content="#196141">
+    {% include '_pwa_head.html' %}
     <link rel="icon" href="{{ url_for('static', filename='icon-192.png') }}">
 
     <link href="{{ url_for('static', filename='vendor/bootstrap/bootstrap.min.css') }}" rel="stylesheet">

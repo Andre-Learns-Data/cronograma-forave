@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard — Gestor de Cronograma FORAVE</title>
     <!-- PWA: torna a página instalável no telemóvel -->
-    <link rel="manifest" href="/static/manifest.json">
-    <meta name="theme-color" content="#196141">
+    {% include '_pwa_head.html' %}
     <link rel="icon" href="/static/icon-192.png">
-    <link rel="apple-touch-icon" href="/static/icon-192.png">
     <!-- Bootstrap CSS -->
     <link href="{{ url_for('static', filename='vendor/bootstrap/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='forave.css') }}">
