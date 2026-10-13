@@ -122,9 +122,12 @@ MODULOS = [
     ("Introdução à Proteção de Dados Pessoais", "Stéphanie Dermagne", 25, "pendente", "10672", []),
 ]
 
-# Turma real (nomes + emails da escola). Todos inscritos no módulo em curso.
-# O último é o aluno de demonstração (email real) — persona "aluno" + emails.
-_TURMA = [
+# TURMA REAL (nomes + emails @forave.org da escola). IMPORTANTE: já NÃO é
+# semeada — é IMPORTADA AO VIVO na Parte 5 da demo, para que o "avisar" chegue
+# mesmo às caixas dos colegas (o "wow" do email). Fica aqui só para gerar o
+# CSV de importação: demonstracoes/importar_formandos_turma_real.csv
+# (ver gerar_csv_turma_real() no fim deste ficheiro).
+TURMA_REAL = [
     ("Ana Silva", "asilvaegicd2527@forave.org"),
     ("Andres Macias", "amaciasegicd2527@forave.org"),
     ("André Moreira", "amoreiraegicd2527@forave.org"),
@@ -146,10 +149,22 @@ _TURMA = [
     ("Sérgio Pereira", "spereiraegicd2527@forave.org"),
 ]
 
-# Alunos (formandos): a turma real + o aluno de demonstração (email real),
-# todos inscritos no módulo em curso.
-ALUNOS = [(nome, email, [M_PY_AV]) for nome, email in _TURMA]
-ALUNOS.append(("Aluno de Demonstração", EMAIL_ALUNO_TESTE, [M_PY_AV]))
+# BASELINE semeado (controlado, SEM a turma real). São os destinatários dos
+# avisos "avisar" desde o início da demo — todos caem em caixas que o André
+# controla (para projetar), e todos inscritos no módulo em curso:
+#   1. o aluno de demonstração (caixa principal projetada);
+#   2. o email institucional do André (@forave.org);
+#   3. três inventados via PLUS-ADDRESSING do Gmail
+#      (alunoforavecetdados+nome@gmail.com — todos entregam na MESMA caixa de
+#      alunoforavecetdados@gmail.com, mas contam como destinatários distintos).
+# A turma real (TURMA_REAL) entra só ao vivo, por importação, na Parte 5.
+ALUNOS = [
+    ("Aluno de Demonstração", EMAIL_ALUNO_TESTE, [M_PY_AV]),
+    ("André Moreira", "amoreiraegicd2527@forave.org", [M_PY_AV]),
+    ("Ana Costa", "alunoforavecetdados+ana@gmail.com", [M_PY_AV]),
+    ("Bruno Dias", "alunoforavecetdados+bruno@gmail.com", [M_PY_AV]),
+    ("Carla Esteves", "alunoforavecetdados+carla@gmail.com", [M_PY_AV]),
+]
 
 # Avaliações do módulo em curso (com pesos -> nota final por média ponderada).
 AVALIACOES = {
@@ -163,28 +178,26 @@ AVALIACOES = {
     ],
 }
 
-# Notas: (módulo, índice da avaliação, email do aluno, nota). Um subconjunto
-# da turma + o aluno de demonstração, para o lançamento/pauta terem dados.
-# Avaliações: Teste(0), Projeto(1), Participação(2).
+# Notas: (módulo, índice da avaliação, email do aluno, nota). Só os alunos do
+# BASELINE (os 5 semeados), para o lançamento/pauta terem dados desde o início.
+# A turma real entra sem notas (importada ao vivo) — lançar-lhes notas seria
+# outra demonstração. Avaliações: Teste(0), Projeto(1), Participação(2).
 NOTAS = [
     (M_PY_AV, 0, "amoreiraegicd2527@forave.org", 16),
     (M_PY_AV, 1, "amoreiraegicd2527@forave.org", 17),
     (M_PY_AV, 2, "amoreiraegicd2527@forave.org", 18),
-    (M_PY_AV, 0, "jnunesegicd2527@forave.org", 15),
-    (M_PY_AV, 1, "jnunesegicd2527@forave.org", 16),
-    (M_PY_AV, 2, "jnunesegicd2527@forave.org", 17),
-    (M_PY_AV, 0, "morsoegicd2527@forave.org", 13),
-    (M_PY_AV, 1, "morsoegicd2527@forave.org", 14),
-    (M_PY_AV, 2, "morsoegicd2527@forave.org", 15),
-    (M_PY_AV, 0, "asilvaegicd2527@forave.org", 11),
-    (M_PY_AV, 1, "asilvaegicd2527@forave.org", 13),
-    (M_PY_AV, 2, "asilvaegicd2527@forave.org", 14),
-    (M_PY_AV, 0, "grodriguesegicd2527@forave.org", 17),
-    (M_PY_AV, 1, "grodriguesegicd2527@forave.org", 18),
-    (M_PY_AV, 2, "grodriguesegicd2527@forave.org", 19),
     (M_PY_AV, 0, EMAIL_ALUNO_TESTE, 14),
     (M_PY_AV, 1, EMAIL_ALUNO_TESTE, 15),
     (M_PY_AV, 2, EMAIL_ALUNO_TESTE, 16),
+    (M_PY_AV, 0, "alunoforavecetdados+ana@gmail.com", 11),
+    (M_PY_AV, 1, "alunoforavecetdados+ana@gmail.com", 13),
+    (M_PY_AV, 2, "alunoforavecetdados+ana@gmail.com", 14),
+    (M_PY_AV, 0, "alunoforavecetdados+bruno@gmail.com", 13),
+    (M_PY_AV, 1, "alunoforavecetdados+bruno@gmail.com", 14),
+    (M_PY_AV, 2, "alunoforavecetdados+bruno@gmail.com", 15),
+    (M_PY_AV, 0, "alunoforavecetdados+carla@gmail.com", 17),
+    (M_PY_AV, 1, "alunoforavecetdados+carla@gmail.com", 18),
+    (M_PY_AV, 2, "alunoforavecetdados+carla@gmail.com", 19),
 ]
 
 
@@ -242,6 +255,24 @@ def semear_contas(pasta="dados", engine=None):
     for email, papel in contas:
         auth.registar(email, PASSWORD_DEMO, papel)  # devolve None se já existir
     return [c[0] for c in contas]
+
+
+def gerar_csv_turma_real(caminho="demonstracoes/importar_formandos_turma_real.csv"):
+    """
+    Escreve o CSV da TURMA REAL (19 @forave.org) para a importação ao vivo da
+    Parte 5. Mantém-no em sincronia com a lista TURMA_REAL (fonte única), para
+    o ficheiro nunca ficar desatualizado em relação ao código.
+
+    NOTA: importar formandos NÃO envia email (ver mapa de notificações) — a
+    "inundação" vem da ação "avisar" seguinte (ex.: reagendar), já com a turma
+    inscrita. Todos ficam inscritos no módulo em curso.
+    """
+    os.makedirs(os.path.dirname(caminho), exist_ok=True)
+    with open(caminho, "w", encoding="utf-8", newline="") as f:
+        f.write("nome,email,modulos\n")
+        for nome, email in TURMA_REAL:
+            f.write(f"{nome},{email},{M_PY_AV}\n")
+    return caminho
 
 
 def garantir_env():
