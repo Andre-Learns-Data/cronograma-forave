@@ -1,27 +1,17 @@
 @echo off
 REM ============================================================
-REM  Plano B - REPOR a demo a ZERO (curso limpo)
-REM  Apaga a base de dados local (dados\cronograma.db) e arranca
-REM  de novo; no proximo arranque a app semeia o curso limpo.
-REM  A base de dados e UM UNICO ficheiro - apagar e seguro.
+REM  Repor o Plano B local a ZERO (apaga a base de dados local).
+REM  Ao arrancar a seguir, o site volta a semear o curso limpo.
+REM  So mexe no ficheiro LOCAL dados\cronograma.db - nada online.
 REM ============================================================
 cd /d "%~dp0"
-chcp 65001 >nul
-title Plano B - Repor a demo (curso limpo)
-
-echo.
-echo === Plano B - repor a demo a ZERO (curso limpo) ===
-echo.
+title Repor Plano B local
 
 if exist "dados\cronograma.db" (
   del /q "dados\cronograma.db"
-  echo Base de dados local apagada.
-  echo No proximo arranque, a demo e semeada de novo (curso + 3 contas).
+  echo Base de dados local apagada. No proximo arranque, semeia o curso limpo.
 ) else (
-  echo Nao havia base de dados local - ja estava limpo.
+  echo Nao havia base de dados local; ja esta limpo.
 )
-
 echo.
-echo A arrancar de novo...
-echo.
-call "%~dp0_PlanoB_Arrancar.bat"
+pause
