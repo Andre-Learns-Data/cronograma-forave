@@ -39,7 +39,9 @@ from sqlalchemy import (
     create_engine,
     delete,
     insert,
+    inspect,
     select,
+    text,
 )
 
 # ------------------------------------------------------------
@@ -179,6 +181,9 @@ utilizadores = Table(
     Column("email", String),
     Column("papel", String),
     Column("password_hash", Text),
+    # Conta já ativada (email confirmado)? As contas semeadas e as que já
+    # existiam nascem ativas; só o auto-registo novo nasce por confirmar.
+    Column("confirmado", Boolean, default=True),
 )
 
 # Registo de auditoria (append-only): quem fez o quê e quando.
@@ -228,6 +233,34 @@ def criar_engine(database_url=None):
 def criar_tabelas(engine):
     """Cria as tabelas se ainda não existirem (não apaga dados)."""
     metadata.create_all(engine)
+    _migrar_coluna_confirmado(engine)
+
+
+def _migrar_coluna_confirmado(engine):
+    """
+    Migração defensiva: garante a coluna 'confirmado' na tabela 'utilizadores'.
+
+    O metadata.create_all() só CRIA tabelas que ainda não existem — nunca
+    acrescenta colunas novas a uma tabela já criada. Por isso uma base de
+    dados antiga (ex.: o PostgreSQL já em produção, que não é recriado a
+    cada arranque) ficaria sem a coluna e as queries partiam. Aqui, se a
+    coluna faltar, fazemos um ALTER TABLE ... ADD COLUMN com default TRUE —
+    assim todas as contas que já lá estavam continuam ATIVAS. Funciona tanto
+    em SQLite como em PostgreSQL (sintaxe comum). É idempotente: se a coluna
+    já existir, não faz nada.
+    """
+    try:
+        colunas = [c["name"] for c in inspect(engine).get_columns("utilizadores")]
+    except Exception:
+        # Tabela ainda não existe (BD vazia acabada de criar já a traz) —
+        # nada a migrar.
+        return
+    if "confirmado" in colunas:
+        return
+    with engine.begin() as conn:
+        conn.execute(text(
+            "ALTER TABLE utilizadores ADD COLUMN confirmado BOOLEAN DEFAULT TRUE"
+        ))
 
 
 def recriar_tabelas(engine):
@@ -350,7 +383,10 @@ def _inserir_utilizadores(conn, utilizadores_dados):
     for i, u in enumerate(utilizadores_dados):
         conn.execute(insert(utilizadores).values(
             ordem=i, email=u["email"], papel=u["papel"],
-            password_hash=u["password_hash"]))
+            password_hash=u["password_hash"],
+            # Retrocompat: um dict sem 'confirmado' (ex.: conta antiga) entra
+            # como ativo.
+            confirmado=u.get("confirmado", True)))
 
 
 def guardar_gestor(engine, modulos_dados, professores_dados, formandos_dados,
@@ -512,6 +548,8 @@ def carregar_utilizadores(engine):
             lista.append({
                 "email": u.email, "papel": u.papel,
                 "password_hash": u.password_hash,
+                # None (coluna acabada de migrar, sem valor) conta como ativo.
+                "confirmado": True if u.confirmado is None else bool(u.confirmado),
             })
         return lista
 

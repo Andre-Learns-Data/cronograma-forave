@@ -113,11 +113,14 @@ class GestorAutenticacao:
                 email = reg.get("Email", "")
                 password_hash = reg.get("Password Hash", "")
                 papel = reg.get("Papel", "aluno")
+                # Retrocompat: Sheet sem a coluna -> conta ativa (True).
+                confirmado = reg.get("Confirmado", True)
                 if email == "":
                     continue
                 if papel == "":
                     papel = "aluno"
-                self.utilizadores.append(Utilizador(email, password_hash, papel))
+                self.utilizadores.append(
+                    Utilizador(email, password_hash, papel, confirmado))
             return
 
         try:
@@ -194,7 +197,7 @@ class GestorAutenticacao:
     # Registo e autenticação
     # --------------------------------------------------------
 
-    def registar(self, email, password, papel="aluno"):
+    def registar(self, email, password, papel="aluno", confirmado=True):
         """
         Cria uma conta nova com a password já "hasheada".
 
@@ -207,6 +210,9 @@ class GestorAutenticacao:
             email (str): Email (chave única).
             password (str): Password em texto (será convertida em hash).
             papel (str): Papel da conta. Por defeito "aluno".
+            confirmado (bool): Conta já ativada? Por defeito True (contas
+                semeadas). O auto-registo da rota web passa False — a conta
+                só passa a ativa depois de o aluno abrir o link de confirmação.
 
         Retorna:
             Utilizador ou None: A conta criada, ou None se já existir
@@ -219,12 +225,39 @@ class GestorAutenticacao:
         # Calcular o hash da password (nunca guardamos a password em si)
         password_hash = generate_password_hash(password)
 
-        utilizador = Utilizador(email, password_hash, papel)
+        utilizador = Utilizador(email, password_hash, papel, confirmado)
         self.utilizadores.append(utilizador)
 
         # Persistir no backend activo
         if self.modo_sheets:
-            self.gsheets.acrescentar_utilizador(email, password_hash, papel)
+            self.gsheets.acrescentar_utilizador(email, password_hash, papel, confirmado)
+        else:
+            self.guardar()
+
+        return utilizador
+
+    def confirmar_conta(self, email):
+        """
+        Marca uma conta como confirmada (ativa) após o aluno abrir o link.
+
+        Idempotente: confirmar uma conta já ativa não faz mal nenhum.
+
+        Parâmetros:
+            email (str): Email da conta a ativar.
+
+        Retorna:
+            Utilizador ou None: A conta ativada, ou None se não existir.
+        """
+        utilizador = self.procurar(email)
+        if utilizador is None:
+            return None
+
+        utilizador.confirmado = True
+
+        # Persistir no backend activo. No Sheet, escrevemos só a célula
+        # (confirmar_utilizador); nos outros, reescrevemos o ficheiro/BD.
+        if self.modo_sheets:
+            self.gsheets.confirmar_utilizador(email)
         else:
             self.guardar()
 
@@ -363,3 +396,61 @@ class GestorAutenticacao:
             self.guardar()
 
         return utilizador
+
+    # --------------------------------------------------------
+    # Confirmação de email (ativação da conta no auto-registo)
+    # --------------------------------------------------------
+    #
+    # Mesma técnica do token de reposição, para um fim diferente: ao
+    # registar-se, o aluno recebe por email um link com um token assinado
+    # que carrega o seu email. Abrir o link ativa a conta (confirmar_conta).
+    # Enquanto não o fizer, o login recusa a entrada. Fecha o furo de alguém
+    # criar conta com o email de outra pessoa: sem acesso à caixa de correio,
+    # a conta nunca é ativada. Não guardamos o token — a assinatura é a prova.
+    #
+    # "Sal" próprio ("confirmacao-email") isola-o do token de reposição: um
+    # token de um fim nunca é aceite para o outro, mesmo com a mesma chave.
+
+    def _serializador_confirmacao(self):
+        """Cria o assinador dos tokens de confirmação de email."""
+        return URLSafeTimedSerializer(self.secret, salt="confirmacao-email")
+
+    def criar_token_confirmacao(self, email):
+        """
+        Gera um token de confirmação para um email (a conta deve existir).
+
+        Parâmetros:
+            email (str): Email da conta acabada de registar.
+
+        Retorna:
+            str ou None: O token assinado, ou None se não existir conta.
+        """
+        if self.procurar(email) is None:
+            return None
+        return self._serializador_confirmacao().dumps(email)
+
+    def validar_token_confirmacao(self, token, validade_segundos=604800):
+        """
+        Verifica um token de confirmação e devolve o email a que pertence.
+
+        Falha (devolve None) se o token estiver corrompido/falsificado, tiver
+        expirado (por defeito 7 dias — um aluno pode abrir o email mais tarde),
+        ou a conta já não existir.
+
+        Parâmetros:
+            token (str): O token vindo do link de confirmação.
+            validade_segundos (int): Validade. Por defeito 604800 (7 dias).
+
+        Retorna:
+            str ou None: O email se o token for válido, senão None.
+        """
+        try:
+            email = self._serializador_confirmacao().loads(
+                token, max_age=validade_segundos)
+        except (BadSignature, SignatureExpired):
+            return None
+
+        if self.procurar(email) is None:
+            return None
+
+        return email

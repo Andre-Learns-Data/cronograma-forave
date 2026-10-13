@@ -33,7 +33,7 @@ class Utilizador:
         papel (str): "aluno" ou "coordenador". Por agora só "aluno".
     """
 
-    def __init__(self, email, password_hash, papel="aluno"):
+    def __init__(self, email, password_hash, papel="aluno", confirmado=True):
         """
         Construtor — cria um novo utilizador.
 
@@ -41,10 +41,17 @@ class Utilizador:
             email (str): Email (chave única).
             password_hash (str): Hash da password (calculado por quem chama).
             papel (str): Papel do utilizador. Por defeito "aluno".
+            confirmado (bool): Conta já ativada (email confirmado)? Por defeito
+                True — as contas semeadas e todas as que já existiam nascem
+                ativas. Só o AUTO-REGISTO (novo) cria contas com confirmado=False,
+                que só passam a True quando o aluno abre o link de confirmação
+                do email. Fecha o furo de alguém criar conta com o email de
+                outra pessoa: sem acesso à caixa de correio, não ativa.
         """
         self.email = email
         self.password_hash = password_hash
         self.papel = papel
+        self.confirmado = confirmado
 
     # --------------------------------------------------------
     # Métodos de conversão — objecto <-> dicionário (para JSON)
@@ -61,6 +68,7 @@ class Utilizador:
         dados["email"] = self.email
         dados["password_hash"] = self.password_hash
         dados["papel"] = self.papel
+        dados["confirmado"] = self.confirmado
 
         return dados
 
@@ -79,12 +87,15 @@ def utilizador_from_dict(dados):
         Utilizador: Objecto reconstruído.
 
     Nota: usa .get("papel", "aluno") para retrocompatibilidade —
-    contas antigas sem o campo "papel" assumem "aluno".
+    contas antigas sem o campo "papel" assumem "aluno". Do mesmo modo,
+    .get("confirmado", True) garante que contas criadas ANTES de existir
+    a confirmação de email continuam ativas (não se "trancam" sozinhas).
     """
     utilizador = Utilizador(
         email=dados["email"],
         password_hash=dados["password_hash"],
-        papel=dados.get("papel", "aluno")
+        papel=dados.get("papel", "aluno"),
+        confirmado=dados.get("confirmado", True)
     )
 
     return utilizador

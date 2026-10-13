@@ -29,6 +29,23 @@ import app as appmod  # noqa: E402
 from gestor_cronograma import GestorCronograma  # noqa: E402
 
 
+def _registar_e_confirmar(cliente, email, password="segredo"):
+    """
+    Regista uma conta via web e confirma-a logo a seguir.
+
+    Desde a confirmação de email, uma conta recém-registada nasce POR ATIVAR
+    e o login é recusado até ser confirmada. Nos testes não há caixa de
+    correio para clicar no link, por isso confirmamos a conta diretamente
+    (confirmar_conta) — é o equivalente a abrir o link. Os testes que a
+    seguir fazem login usam este atalho; os testes do PRÓPRIO fluxo de
+    registo/confirmação não o usam (verificam o bloqueio por confirmar).
+    """
+    cliente.post("/registar",
+                 data={"email": email, "password": password, "password2": password},
+                 follow_redirects=True)
+    appmod.carregar_auth().confirmar_conta(email)
+
+
 class TestWeb(unittest.TestCase):
 
     @classmethod
@@ -39,6 +56,11 @@ class TestWeb(unittest.TestCase):
                            ["01/06/2026"], ufcd="5412")
         g.adicionar_formando("Ana", "ana@forave.org", ["Python"])
         g.adicionar_formando("Rui", "rui@forave.org", ["Python"])
+        # Formandos dedicados aos testes de confirmação de email (emails
+        # próprios, para não colidir com o estado partilhado da Ana/Rui —
+        # as contas JSON persistem entre testes na mesma pasta temporária).
+        g.adicionar_formando("Conf A", "conf.a@forave.org", ["Python"])
+        g.adicionar_formando("Conf B", "conf.b@forave.org", ["Python"])
         g.adicionar_avaliacao("Python", "15/06/2026", "projecto",
                               "Projecto", "POO", "Repo", 70)
         g.adicionar_avaliacao("Python", "10/06/2026", "teste",
@@ -82,10 +104,7 @@ class TestWeb(unittest.TestCase):
 
     def test_cronograma_autenticado_mostra_pagina(self):
         cliente = appmod.app.test_client()
-        cliente.post("/registar",
-                    data={"email": "ana@forave.org",
-                          "password": "segredo", "password2": "segredo"},
-                    follow_redirects=True)
+        _registar_e_confirmar(cliente, "ana@forave.org")
         cliente.post("/login",
                     data={"email": "ana@forave.org", "password": "segredo"},
                     follow_redirects=True)
@@ -108,10 +127,7 @@ class TestWeb(unittest.TestCase):
 
     def test_cronograma_ics_autenticado_devolve_calendario(self):
         cliente = appmod.app.test_client()
-        cliente.post("/registar",
-                    data={"email": "ana@forave.org",
-                          "password": "segredo", "password2": "segredo"},
-                    follow_redirects=True)
+        _registar_e_confirmar(cliente, "ana@forave.org")
         cliente.post("/login",
                     data={"email": "ana@forave.org", "password": "segredo"},
                     follow_redirects=True)
@@ -151,15 +167,50 @@ class TestWeb(unittest.TestCase):
                              follow_redirects=True)
         self.assertIn("não está na lista de formandos", r.get_data(as_text=True))
 
+    # --- Confirmação de email (ativação da conta) ---
+
+    def test_registo_cria_conta_por_confirmar_e_login_recusado(self):
+        # Registo válido -> conta nasce POR CONFIRMAR e o login é recusado
+        # com uma mensagem específica (não "incorrectos").
+        cliente = appmod.app.test_client()
+        cliente.post("/registar",
+                    data={"email": "conf.a@forave.org",
+                          "password": "segredo", "password2": "segredo"},
+                    follow_redirects=True)
+        self.assertFalse(appmod.carregar_auth().procurar("conf.a@forave.org").confirmado)
+        r = cliente.post("/login",
+                        data={"email": "conf.a@forave.org", "password": "segredo"},
+                        follow_redirects=True)
+        self.assertIn("Confirma primeiro o teu email", r.get_data(as_text=True))
+
+    def test_confirmar_email_ativa_conta_e_login_entra(self):
+        cliente = appmod.app.test_client()
+        cliente.post("/registar",
+                    data={"email": "conf.b@forave.org",
+                          "password": "segredo", "password2": "segredo"},
+                    follow_redirects=True)
+        # Abrir o link de confirmação (token assinado) -> conta fica ativa
+        token = appmod.carregar_auth().criar_token_confirmacao("conf.b@forave.org")
+        r = cliente.get("/confirmar/" + token, follow_redirects=True)
+        self.assertIn("Email confirmado", r.get_data(as_text=True))
+        self.assertTrue(appmod.carregar_auth().procurar("conf.b@forave.org").confirmado)
+        # Agora o login entra
+        r = cliente.post("/login",
+                        data={"email": "conf.b@forave.org", "password": "segredo"})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn("/aluno", r.headers.get("Location", ""))
+
+    def test_confirmar_token_invalido_redirecciona(self):
+        r = self.client.get("/confirmar/token-invalido")
+        self.assertEqual(r.status_code, 302)
+        self.assertIn("/login", r.headers.get("Location", ""))
+
     # --- Fluxo completo + RGPD ---
 
     def test_fluxo_login_e_notas_e_rgpd(self):
         cliente = appmod.app.test_client()
-        # Registar a Ana (formanda válida)
-        cliente.post("/registar",
-                    data={"email": "ana@forave.org",
-                          "password": "segredo", "password2": "segredo"},
-                    follow_redirects=True)
+        # Registar a Ana (formanda válida) e confirmar o email
+        _registar_e_confirmar(cliente, "ana@forave.org")
         # Login
         r = cliente.post("/login",
                         data={"email": "ana@forave.org", "password": "segredo"},
@@ -261,10 +312,7 @@ class TestWeb(unittest.TestCase):
     def _cliente_coordenador(self):
         """Regista e autentica o coordenador; devolve o cliente com sessão."""
         cliente = appmod.app.test_client()
-        cliente.post("/registar",
-                    data={"email": "coord@forave.org",
-                          "password": "segredo", "password2": "segredo"},
-                    follow_redirects=True)
+        _registar_e_confirmar(cliente, "coord@forave.org")
         cliente.post("/login",
                     data={"email": "coord@forave.org", "password": "segredo"},
                     follow_redirects=True)
@@ -318,10 +366,7 @@ class TestWeb(unittest.TestCase):
                     follow_redirects=True)
         # O Rui, autenticado, passa a ver 19 nas suas notas
         aluno = appmod.app.test_client()
-        aluno.post("/registar",
-                  data={"email": "rui@forave.org",
-                        "password": "segredo", "password2": "segredo"},
-                  follow_redirects=True)
+        _registar_e_confirmar(aluno, "rui@forave.org")
         aluno.post("/login",
                   data={"email": "rui@forave.org", "password": "segredo"},
                   follow_redirects=True)
@@ -409,10 +454,7 @@ class TestWeb(unittest.TestCase):
     def _cliente_professor(self):
         """Regista e autentica o professor Bruno; devolve o cliente."""
         cliente = appmod.app.test_client()
-        cliente.post("/registar",
-                    data={"email": "bruno@forave.org",
-                          "password": "segredo", "password2": "segredo"},
-                    follow_redirects=True)
+        _registar_e_confirmar(cliente, "bruno@forave.org")
         cliente.post("/login",
                     data={"email": "bruno@forave.org", "password": "segredo"},
                     follow_redirects=True)
@@ -583,12 +625,10 @@ class TestWeb(unittest.TestCase):
         prof = g.procurar_professor_por_email("carla@forave.org")
         self.assertIsNotNone(prof)
         self.assertIn("Python", prof.modulos)
-        # A Carla regista-se e entra -> papel professor, vê o módulo dela
+        # A Carla regista-se, confirma o email e entra -> papel professor,
+        # vê o módulo dela
         carla = appmod.app.test_client()
-        carla.post("/registar",
-                  data={"email": "carla@forave.org",
-                        "password": "segredo", "password2": "segredo"},
-                  follow_redirects=True)
+        _registar_e_confirmar(carla, "carla@forave.org")
         r = carla.post("/login",
                       data={"email": "carla@forave.org", "password": "segredo"},
                       follow_redirects=True)
@@ -798,10 +838,7 @@ class TestWeb(unittest.TestCase):
     def _cliente_aluno(self):
         """Regista e autentica a Ana; devolve o cliente com sessão."""
         cliente = appmod.app.test_client()
-        cliente.post("/registar",
-                    data={"email": "ana@forave.org",
-                          "password": "segredo", "password2": "segredo"},
-                    follow_redirects=True)
+        _registar_e_confirmar(cliente, "ana@forave.org")
         cliente.post("/login",
                     data={"email": "ana@forave.org", "password": "segredo"},
                     follow_redirects=True)

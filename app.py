@@ -927,11 +927,68 @@ def registar():
             flash('Já existe uma conta com esse email. Faz login.', 'erro')
             return redirect(url_for('login', perfil=perfil))
 
-        auth.registar(email, password)
-        flash('Conta criada com sucesso! Já podes entrar.', 'ok')
+        # A conta nasce POR CONFIRMAR (confirmado=False): só fica ativa depois
+        # de o aluno abrir o link que lhe enviamos por email. É o que garante
+        # que a conta é mesmo do dono do email — sem acesso à caixa de correio,
+        # não se ativa (fecha o furo de criar conta com o email de outrem).
+        auth.registar(email, password, confirmado=False)
+
+        # Gerar o link de confirmação (token assinado) e enviá-lo por email.
+        # Mesmo padrão à prova de falhas do /recuperar: se o envio falhar
+        # (ex.: SMTP bloqueado no alojamento), não parte a página — o link
+        # fica no log para o coordenador poder ajudar.
+        token = auth.criar_token_confirmacao(email)
+        link = url_for('confirmar_email', token=token, _external=True)
+        try:
+            sender = carregar_email()
+            enviado = False
+            if sender.configurado:
+                corpo = (
+                    "Olá,\n\n"
+                    "Obrigado por criares a tua conta no Cronograma FORAVE.\n\n"
+                    "Confirma o teu email abrindo este link (válido 7 dias):\n"
+                    f"{link}\n\n"
+                    "Depois de confirmares, já podes entrar com o teu email e "
+                    "password.\n\n"
+                    "Se não foste tu a criar esta conta, ignora este email.\n\n"
+                    "Cronograma FORAVE"
+                )
+                enviado = sender.enviar(
+                    email, email, "Confirma o teu email — Cronograma FORAVE", corpo
+                )
+            if not enviado:
+                print(f"[REGISTO] Email não enviado — link de confirmação para {email}: {link}")
+        except Exception as erro:
+            print(f"[REGISTO] Erro ao enviar email para {email}: {erro}")
+            print(f"[REGISTO] Link de confirmação (fallback no log): {link}")
+
+        flash('Conta criada! Enviámos um email para confirmares o teu endereço. '
+              'Abre o link (verifica também o spam) e depois entra.', 'ok')
         return redirect(url_for('login', perfil=perfil))
 
     return render_template('registar.html')
+
+
+@app.route('/confirmar/<token>')
+def confirmar_email(token):
+    """
+    Ativa uma conta a partir do link de confirmação enviado por email.
+
+    Valida o token (assinatura + validade). Se for válido, marca a conta
+    como confirmada e encaminha para o login. O link é seguro (assinado com
+    a chave da app) e expira sozinho (7 dias) — ver criar/validar_token_confirmacao.
+    """
+    auth = carregar_auth()
+    email = auth.validar_token_confirmacao(token)
+
+    if email is None:
+        flash('Esse link de confirmação é inválido ou expirou. '
+              'Tenta registar-te de novo.', 'erro')
+        return redirect(url_for('login'))
+
+    auth.confirmar_conta(email)
+    flash('Email confirmado! Já podes entrar com o teu email e password.', 'ok')
+    return redirect(url_for('login'))
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -952,6 +1009,13 @@ def login():
             # Preserva o perfil (aluno/coordenador) para a página manter o
             # mesmo aspecto após um erro. O perfil vem na query string, que o
             # Flask disponibiliza em request.args mesmo num POST.
+            return redirect(url_for('login', perfil=request.args.get('perfil', '')))
+
+        # Conta por confirmar: credenciais certas, mas o email ainda não foi
+        # validado. Não deixamos entrar — é o que dá sentido à confirmação.
+        if not getattr(utilizador, 'confirmado', True):
+            flash('Confirma primeiro o teu email: abre o link que te enviámos '
+                  'ao criar a conta (verifica também o spam).', 'erro')
             return redirect(url_for('login', perfil=request.args.get('perfil', '')))
 
         # Papel efectivo: coordenador (lista COORDENADOR_EMAILS) > professor

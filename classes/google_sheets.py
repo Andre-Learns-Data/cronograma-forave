@@ -544,7 +544,7 @@ class GoogleSheetsSync:
 
         Retorna:
             list: Lista de dicionários com chaves "Email",
-                  "Password Hash", "Papel". Vazio se não conectado.
+                  "Password Hash", "Papel", "Confirmado". Vazio se não conectado.
         """
         if not self.conectado:
             return []
@@ -555,9 +555,9 @@ class GoogleSheetsSync:
                 return []
 
             # Ler em bruto e mapear por POSIÇÃO das colunas
-            # (col 0 = email, col 1 = hash, col 2 = papel). NÃO usamos
-            # get_all_records()/cabeçalho de propósito: se faltasse o
-            # cabeçalho, o get_all_records confundia a 1ª conta com o
+            # (col 0 = email, col 1 = hash, col 2 = papel, col 3 = confirmado).
+            # NÃO usamos get_all_records()/cabeçalho de propósito: se faltasse
+            # o cabeçalho, o get_all_records confundia a 1ª conta com o
             # cabeçalho e partia o login. Ler por posição é robusto.
             registos = []
             for linha in separador.get_all_values():
@@ -571,17 +571,27 @@ class GoogleSheetsSync:
                     papel = linha[2].strip()
                 else:
                     papel = "aluno"
+                # col 3 = confirmado. Retrocompat: uma conta ANTIGA (sem esta
+                # coluna) ou com a célula vazia conta como ATIVA. Só o valor
+                # explícito "0"/"nao"/"false" marca a conta como por confirmar.
+                confirmado = True
+                if len(linha) >= 4:
+                    marca = linha[3].strip().lower()
+                    if marca in ("0", "nao", "não", "false"):
+                        confirmado = False
                 registos.append({
                     "Email": email,
                     "Password Hash": linha[1],
-                    "Papel": papel
+                    "Papel": papel,
+                    "Confirmado": confirmado
                 })
             return registos
         except Exception as e:
             print(f"  Google Sheets: erro ao obter utilizadores — {e}")
             return []
 
-    def acrescentar_utilizador(self, email, password_hash, papel="aluno"):
+    def acrescentar_utilizador(self, email, password_hash, papel="aluno",
+                               confirmado=True):
         """
         Acrescenta UMA conta nova ao separador "Utilizadores".
 
@@ -593,6 +603,8 @@ class GoogleSheetsSync:
             email (str): Email da conta.
             password_hash (str): Hash da password (nunca a password).
             papel (str): Papel da conta ("aluno" por defeito).
+            confirmado (bool): Conta já ativada? As semeadas entram ativas;
+                o auto-registo entra por confirmar (False).
 
         Retorna:
             bool: True se acrescentou, False se não estava conectado.
@@ -606,12 +618,43 @@ class GoogleSheetsSync:
         if separador is None:
             return False
 
-        # Acrescentar uma linha [email, hash, papel]. Não escrevemos um
-        # cabeçalho aqui de propósito: a leitura (obter_utilizadores) é
+        # Acrescentar uma linha [email, hash, papel, confirmado]. Não escrevemos
+        # um cabeçalho aqui de propósito: a leitura (obter_utilizadores) é
         # posicional e não depende de cabeçalho, o que torna o registo
         # robusto (o cabeçalho frágil partia o login — ver obter_utilizadores).
-        separador.append_row([email, password_hash, papel])
+        # confirmado -> "1"/"0" (texto; a leitura interpreta "0" como falso).
+        separador.append_row([email, password_hash, papel, "1" if confirmado else "0"])
         return True
+
+    def confirmar_utilizador(self, email):
+        """
+        Marca uma conta como confirmada (ativa) no separador "Utilizadores".
+
+        Usado quando o aluno abre o link de confirmação do email: procura a
+        linha pelo email e escreve "1" na coluna 4 (confirmado), deixando o
+        resto intacto. Mesmo padrão posicional do atualizar_password.
+
+        Parâmetros:
+            email (str): Email da conta a ativar.
+
+        Retorna:
+            bool: True se ativou, False se não estava conectado ou se não
+                  encontrou a conta.
+        """
+        if not self.conectado:
+            return False
+
+        separador = self.obter_separador("Utilizadores")
+        if separador is None:
+            return False
+
+        linhas = separador.get_all_values()
+        for indice, linha in enumerate(linhas, start=1):
+            if len(linha) >= 1 and linha[0].strip() == email:
+                separador.update_cell(indice, 4, "1")  # coluna 4 = confirmado
+                return True
+
+        return False
 
     def atualizar_password_utilizador(self, email, novo_hash):
         """
