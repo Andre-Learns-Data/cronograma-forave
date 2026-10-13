@@ -186,6 +186,7 @@
               <i class="bi bi-exclamation-triangle me-1" style="color:#c77f0a"></i><strong>Precisa de atenção</strong>
             </div>
             <div class="card-body">
+              <div class="app-chips" id="chipsAtencao" role="group" aria-label="Filtrar avisos por tipo"></div>
               <ul class="app-alertas" id="alertasAtencao"></ul>
             </div>
           </div>
@@ -341,7 +342,7 @@
         {% endif %}
 
         {% for m in dados.modulos %}
-        <details class="card mod-detalhe app-filtravel" data-busca="{{ m.nome }} {{ m.ufcd }} {{ m.professor }}">
+        <details class="card mod-detalhe app-filtravel" id="mod-{{ m.nome|replace(' ','_') }}" data-mod-nome="{{ m.nome }}" data-busca="{{ m.nome }} {{ m.ufcd }} {{ m.professor }}">
             <summary>
                 <span class="mod-titulo">{{ m.nome }}</span>
                 {% if m.ufcd %}<small class="text-muted">({{ m.ufcd }})</small>{% endif %}

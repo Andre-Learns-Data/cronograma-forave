@@ -109,38 +109,139 @@
     })();
 
     // ---- Precisa de atenção ----------------------------------------------
+    // Três situações vigiadas, cada uma com a sua cor e ícone:
+    //   aulas  -> sem aulas no cronograma      (âmbar/dourado)
+    //   aval   -> sem avaliações definidas     (azul/ardósia)
+    //   horas  -> horas dadas acima da previsão (vermelho)
+    // Chips de filtro por tipo (com contagem) em cima; cada aviso é
+    // CLICÁVEL e salta/abre o módulo respetivo na lista em baixo. Os três
+    // chips aparecem sempre, mesmo a 0 — a app vigia as 3 situações e não
+    // se forjam dados (um 0 é informação: "nada a assinalar aqui").
     (function atencao() {
         var ul = document.getElementById("alertasAtencao");
+        var chipsBox = document.getElementById("chipsAtencao");
         if (!ul) return;
 
+        // Metadados de cada tipo: classe de cor, ícone e rótulo do chip.
+        var TIPOS = {
+            aulas: { icon: "bi-calendar-x",       rotulo: "Sem aulas" },
+            aval:  { icon: "bi-clipboard-x",      rotulo: "Sem avaliações" },
+            horas: { icon: "bi-exclamation-octagon", rotulo: "Horas acima" }
+        };
+        var ORDEM = ["aulas", "aval", "horas"];
+
+        // Construir a lista de avisos. Condições INDEPENDENTES (não else-if):
+        // um módulo sem aulas E sem avaliações é duas pendências diferentes,
+        // cada uma acionável por si — aparece nos dois sítios, com verdade.
         var alertas = [];
+        var contagem = { aulas: 0, aval: 0, horas: 0 };
         for (var i = 0; i < mods.length; i++) {
             var m = mods[i];
             if ((m.n_aulas || 0) === 0) {
-                alertas.push({ modulo: m.nome, texto: "Sem aulas marcadas no cronograma" });
-            } else if ((m.n_avaliacoes || 0) === 0) {
-                alertas.push({ modulo: m.nome, texto: "Sem avaliações definidas" });
+                alertas.push({ modulo: m.nome, tipo: "aulas",
+                               texto: "Sem aulas marcadas no cronograma" });
+                contagem.aulas++;
+            }
+            if ((m.n_avaliacoes || 0) === 0) {
+                alertas.push({ modulo: m.nome, tipo: "aval",
+                               texto: "Sem avaliações definidas" });
+                contagem.aval++;
             }
             if ((m.totais || 0) > 0 && (m.dadas || 0) > (m.totais || 0)) {
-                alertas.push({ modulo: m.nome, texto: "Horas dadas acima das previstas" });
+                alertas.push({ modulo: m.nome, tipo: "horas",
+                               texto: "Horas dadas acima das previstas" });
+                contagem.horas++;
             }
         }
+        var total = alertas.length;
 
-        if (!alertas.length) {
-            ul.innerHTML = '<li class="app-tudo-ok"><i class="bi bi-check-circle me-2"></i>Está tudo em dia.</li>';
-            return;
+        // Saltar para o módulo: abre o <details> e faz scroll até ele, com
+        // um realce breve. O módulo é encontrado pelo data-mod-nome (evita
+        // problemas de "slug" com acentos/espaços no id).
+        function saltarPara(nome) {
+            var alvo = null;
+            var cand = document.querySelectorAll(".mod-detalhe[data-mod-nome]");
+            for (var i = 0; i < cand.length; i++) {
+                if (cand[i].getAttribute("data-mod-nome") === nome) { alvo = cand[i]; break; }
+            }
+            if (!alvo) return;
+            if (alvo.tagName.toLowerCase() === "details") alvo.open = true;
+            alvo.scrollIntoView({ behavior: "smooth", block: "center" });
+            alvo.classList.remove("realce");
+            void alvo.offsetWidth;           // reinicia a animação se repetirmos
+            alvo.classList.add("realce");
         }
 
-        var html = "";
-        for (var k = 0; k < alertas.length; k++) {
-            html +=
-                '<li>' +
-                '<i class="bi bi-exclamation-triangle"></i>' +
-                '<span><strong>' + escapar(alertas[k].modulo) + '</strong>' +
-                '<span class="sub">' + escapar(alertas[k].texto) + '</span></span>' +
-                '</li>';
+        var filtro = "todos";
+
+        function desenharLista() {
+            if (!total) {
+                ul.innerHTML = '<li class="app-tudo-ok">' +
+                    '<i class="bi bi-check-circle me-2"></i>Está tudo em dia.</li>';
+                return;
+            }
+            var html = "";
+            for (var k = 0; k < alertas.length; k++) {
+                var a = alertas[k];
+                if (filtro !== "todos" && a.tipo !== filtro) continue;
+                html +=
+                    '<li class="t-' + a.tipo + '" tabindex="0" role="button" ' +
+                        'data-ir="' + escapar(a.modulo) + '" ' +
+                        'title="Abrir o módulo ' + escapar(a.modulo) + '">' +
+                    '<i class="bi ' + TIPOS[a.tipo].icon + '"></i>' +
+                    '<span><strong>' + escapar(a.modulo) + '</strong>' +
+                    '<span class="sub">' + escapar(a.texto) + '</span></span>' +
+                    '</li>';
+            }
+            if (html === "") {
+                html = '<li class="app-vazio">Sem avisos deste tipo.</li>';
+            }
+            ul.innerHTML = html;
         }
-        ul.innerHTML = html;
+
+        function desenharChips() {
+            if (!chipsBox) return;
+            var html =
+                '<button type="button" class="app-chip t-todos" data-filtro="todos" ' +
+                    'aria-pressed="true">Todos <span class="cnt">' + total + '</span></button>';
+            for (var j = 0; j < ORDEM.length; j++) {
+                var t = ORDEM[j];
+                html +=
+                    '<button type="button" class="app-chip t-' + t + '" data-filtro="' + t + '" ' +
+                        'aria-pressed="false"><span class="ponto"></span>' +
+                        TIPOS[t].rotulo + ' <span class="cnt">' + contagem[t] + '</span></button>';
+            }
+            chipsBox.innerHTML = html;
+        }
+
+        desenharChips();
+        desenharLista();
+
+        // Clicar num chip -> muda o filtro (e o estado aria-pressed).
+        if (chipsBox) {
+            chipsBox.addEventListener("click", function (ev) {
+                var b = ev.target.closest(".app-chip");
+                if (!b) return;
+                filtro = b.getAttribute("data-filtro");
+                var todos = chipsBox.querySelectorAll(".app-chip");
+                for (var i = 0; i < todos.length; i++) {
+                    todos[i].setAttribute("aria-pressed",
+                        todos[i] === b ? "true" : "false");
+                }
+                desenharLista();
+            });
+        }
+
+        // Clicar (ou Enter/Espaço) num aviso -> salta para o módulo.
+        ul.addEventListener("click", function (ev) {
+            var li = ev.target.closest("li[data-ir]");
+            if (li) saltarPara(li.getAttribute("data-ir"));
+        });
+        ul.addEventListener("keydown", function (ev) {
+            if (ev.key !== "Enter" && ev.key !== " ") return;
+            var li = ev.target.closest("li[data-ir]");
+            if (li) { ev.preventDefault(); saltarPara(li.getAttribute("data-ir")); }
+        });
     })();
 
     // ---- Gráficos (só se o Chart.js carregou e há módulos) ---------------

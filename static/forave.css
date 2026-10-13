@@ -329,15 +329,52 @@ a:focus-visible {
 .app-etiqueta.is-aula{ background:rgba(25,97,65,.1); color:var(--forave-verde); }
 .app-etiqueta.is-aval{ background:rgba(199,127,10,.14); color:#9a6300; }
 
-/* ---- Precisa de atenção ---- */
+/* ---- Precisa de atenção ----
+   Três situações vigiadas, cada uma com a SUA cor (código de cores,
+   nunca a cor sozinha — há sempre ícone e texto):
+     sem aulas       -> âmbar/dourado  (--at-aulas)
+     sem avaliações  -> azul/ardósia   (--at-aval)
+     horas acima     -> vermelho       (--at-horas)
+   tudo em dia       -> verde          (--at-ok) */
+:root{
+  --at-aulas:#c77f0a; --at-aval:#3b6ea5; --at-horas:#c0392b; --at-ok:#1a7a3a;
+}
+/* Chips de filtro por tipo (mostram contagem; os 3 tipos aparecem sempre,
+   mesmo a 0 — a app vigia as 3 situações, não se forjam dados). */
+.app-chips{ display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:.7rem; }
+.app-chip{ display:inline-flex; align-items:center; gap:.4rem; cursor:pointer;
+  font-size:.78rem; font-weight:600; padding:.22rem .6rem; border-radius:999px;
+  border:1px solid #d9ddd8; background:#fff; color:#4a554d; line-height:1;
+  transition:background .12s, border-color .12s, box-shadow .12s; }
+.app-chip:hover{ background:#f3f6f3; }
+.app-chip .ponto{ width:.6rem; height:.6rem; border-radius:50%; flex:0 0 auto; }
+.app-chip .cnt{ font-weight:700; }
+.app-chip[aria-pressed="true"]{ border-color:currentColor; box-shadow:inset 0 0 0 1px currentColor; }
+.app-chip.t-todos[aria-pressed="true"]{ color:#1f2a24; }
+.app-chip.t-aulas{ color:var(--at-aulas); } .app-chip.t-aulas .ponto{ background:var(--at-aulas); }
+.app-chip.t-aval{ color:var(--at-aval); } .app-chip.t-aval .ponto{ background:var(--at-aval); }
+.app-chip.t-horas{ color:var(--at-horas); } .app-chip.t-horas .ponto{ background:var(--at-horas); }
+
 .app-alertas{ list-style:none; margin:0; padding:0; }
-.app-alertas li{ display:flex; gap:.6rem; padding:.5rem 0; border-bottom:1px solid #eef0ee; }
+.app-alertas li{ display:flex; gap:.6rem; padding:.5rem .55rem; border-bottom:1px solid #eef0ee;
+  border-left:3px solid transparent; border-radius:6px; cursor:pointer;
+  transition:background .12s; }
+.app-alertas li:hover{ background:#f6f8f6; }
 .app-alertas li:last-child{ border-bottom:0; }
-.app-alertas .bi{ color:#c77f0a; font-size:1rem; margin-top:.15rem; }
+.app-alertas li .bi{ font-size:1rem; margin-top:.15rem; }
+.app-alertas li.t-aulas{ border-left-color:var(--at-aulas); } .app-alertas li.t-aulas .bi{ color:var(--at-aulas); }
+.app-alertas li.t-aval{ border-left-color:var(--at-aval); } .app-alertas li.t-aval .bi{ color:var(--at-aval); }
+.app-alertas li.t-horas{ border-left-color:var(--at-horas); } .app-alertas li.t-horas .bi{ color:var(--at-horas); }
 .app-alertas .sub{ display:block; font-size:.82rem; color:var(--app-muted); }
-.app-tudo-ok{ color:#1a7a3a; font-weight:600; border-bottom:0 !important; align-items:center; }
-.app-tudo-ok .bi{ color:#1a7a3a; }
+.app-tudo-ok{ color:var(--at-ok); font-weight:600; border-bottom:0 !important;
+  border-left:0 !important; align-items:center; cursor:default; }
+.app-tudo-ok:hover{ background:transparent !important; }
+.app-tudo-ok .bi{ color:var(--at-ok); }
 .app-vazio{ color:var(--app-muted); font-size:.9rem; }
+
+/* Destaque breve no módulo quando se salta a partir de um aviso. */
+@keyframes realce-modulo{ 0%{ box-shadow:0 0 0 3px rgba(25,97,65,.45); } 100%{ box-shadow:0 0 0 3px rgba(25,97,65,0); } }
+.mod-detalhe.realce{ animation:realce-modulo 1.6s ease-out; }
 
 /* ---- Pesquisa rápida na barra de topo ---- */
 .app-busca{ position:relative; margin-left:1rem; flex:0 1 280px; }
