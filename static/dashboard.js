@@ -165,8 +165,28 @@
                 if (cand[i].getAttribute("data-mod-nome") === nome) { alvo = cand[i]; break; }
             }
             if (!alvo) return;
+            // Os avisos estão na "Visão geral", mas os módulos vivem noutra
+            // secção que costuma estar escondida (hidden). Se não a mostrarmos
+            // primeiro, o abrir/scroll não tem efeito visível. Replica o que a
+            // navegação (forave.js: ativar) já faz, mas sem mexer no submenu.
+            var sec = alvo.closest(".app-sec");
+            if (sec && sec.hidden) {
+                document.querySelectorAll(".app-sec").forEach(function (s) {
+                    s.hidden = (s !== sec);
+                });
+                document.querySelectorAll(".app-navitem[data-sec]").forEach(function (it) {
+                    it.classList.toggle("active", it.dataset.sec === sec.dataset.sec);
+                });
+                var caixaBusca = document.querySelector(".app-busca");
+                if (caixaBusca) {
+                    caixaBusca.style.display = sec.querySelector(".app-filtravel") ? "" : "none";
+                }
+            }
             if (alvo.tagName.toLowerCase() === "details") alvo.open = true;
-            alvo.scrollIntoView({ behavior: "smooth", block: "center" });
+            // Deixa o browser aplicar o 'hidden=false' antes do scroll.
+            requestAnimationFrame(function () {
+                alvo.scrollIntoView({ behavior: "smooth", block: "center" });
+            });
             alvo.classList.remove("realce");
             void alvo.offsetWidth;           // reinicia a animação se repetirmos
             alvo.classList.add("realce");

@@ -29,6 +29,7 @@
 # ============================================================
 
 import csv
+import io
 
 from classes.validacao import email_valido
 
@@ -61,6 +62,37 @@ class ImportadorCSV:
         resumo["erros"] = 0
         resumo["erros_detalhe"] = []
         return resumo
+
+    def _abrir_csv(self, caminho):
+        """
+        Abre o CSV tolerando a codificação com que o Excel o gravou.
+
+        O Excel em Windows PT raramente grava UTF-8 "simples": ou grava
+        'CSV UTF-8' (UTF-8 com BOM) ou 'CSV (separado por vírgulas)' em
+        cp1252 (Windows-1252). Ler qualquer um deles como utf-8 estraga
+        os acentos (ou cola um BOM à 1ª coluna). Por isso tenta-se, por
+        ordem: utf-8-sig (resolve com ou sem BOM) e, se falhar, cp1252.
+        Como último recurso, utf-8 ignorando bytes inválidos — para a
+        importação nunca rebentar, só assinalar o que não conseguir ler.
+
+        Devolve um stream de texto (io.StringIO) pronto para o
+        csv.DictReader. Pode levantar FileNotFoundError, tratado por
+        quem chama (como já acontecia com o open()).
+
+        Parâmetros:
+            caminho (str): Caminho do ficheiro CSV.
+
+        Retorna:
+            io.StringIO: O conteúdo já descodificado.
+        """
+        with open(caminho, "rb") as f:
+            dados = f.read()
+        for codificacao in ("utf-8-sig", "cp1252"):
+            try:
+                return io.StringIO(dados.decode(codificacao))
+            except UnicodeDecodeError:
+                continue
+        return io.StringIO(dados.decode("utf-8", errors="replace"))
 
     def _texto_para_lista(self, texto):
         """
@@ -115,7 +147,7 @@ class ImportadorCSV:
         resumo = self._resumo_vazio()
 
         try:
-            ficheiro = open(caminho, "r", encoding="utf-8")
+            ficheiro = self._abrir_csv(caminho)
         except FileNotFoundError:
             resumo["erros"] = resumo["erros"] + 1
             resumo["erros_detalhe"].append("Ficheiro CSV não encontrado.")
@@ -198,7 +230,7 @@ class ImportadorCSV:
         resumo = self._resumo_vazio()
 
         try:
-            ficheiro = open(caminho, "r", encoding="utf-8")
+            ficheiro = self._abrir_csv(caminho)
         except FileNotFoundError:
             resumo["erros"] = resumo["erros"] + 1
             resumo["erros_detalhe"].append("Ficheiro CSV não encontrado.")
@@ -260,7 +292,7 @@ class ImportadorCSV:
         resumo = self._resumo_vazio()
 
         try:
-            ficheiro = open(caminho, "r", encoding="utf-8")
+            ficheiro = self._abrir_csv(caminho)
         except FileNotFoundError:
             resumo["erros"] = resumo["erros"] + 1
             resumo["erros_detalhe"].append("Ficheiro CSV não encontrado.")
