@@ -20,6 +20,7 @@
 # Dependências: Flask, reportlab
 # ============================================================
 
+import hashlib
 import json
 import os
 import tempfile
@@ -1444,16 +1445,29 @@ def admin_exportar_modulos_csv():
 
 
 @app.route('/admin/exportar/formandos.csv')
-@apenas_coordenador
+@apenas_staff
 def admin_exportar_formandos_csv():
     """
     Exporta os formandos em CSV (nome,email,modulos) — mesmo formato da
-    importação. Tem emails (dado pessoal) -> só o coordenador.
+    importação. Tem emails (dado pessoal).
+
+    Âmbito por papel (modulos_geridos): o coordenador exporta todos os
+    alunos; o professor só os inscritos nos SEUS módulos, e a coluna
+    'modulos' é reduzida a esses — para não revelar inscrições noutros
+    módulos que não gere. É a mesma barreira de autorização usada na
+    restante área de gestão.
     """
     gestor = carregar_gestor()
+    geridos = modulos_geridos(gestor)   # None = coordenador (todos)
     linhas = []
     for f in gestor.formandos:
-        linhas.append([f.nome, f.email, ";".join(f.modulos)])
+        if geridos is None:
+            mods_mostrar = list(f.modulos)
+        else:
+            mods_mostrar = [nm for nm in f.modulos if nm in geridos]
+            if not mods_mostrar:
+                continue   # aluno sem módulos do professor -> não aparece
+        linhas.append([f.nome, f.email, ";".join(mods_mostrar)])
     return _csv_response("formandos.csv", ["nome", "email", "modulos"], linhas)
 
 
@@ -1473,16 +1487,22 @@ def admin_exportar_professores_csv():
 
 
 @app.route('/admin/exportar/notas.csv')
-@apenas_coordenador
+@apenas_staff
 def admin_exportar_notas_csv():
     """
     Exporta as notas lançadas em CSV — uma linha por nota: módulo, UFCD,
-    avaliação, peso, email do aluno e nota. São dados pessoais sensíveis
-    -> só o coordenador. Útil como pauta/arquivo fora do sistema.
+    avaliação, peso, email do aluno e nota. São dados pessoais sensíveis.
+
+    Âmbito por papel (modulos_geridos): o coordenador exporta o curso
+    todo; o professor só as notas dos SEUS módulos. Útil como pauta/
+    arquivo fora do sistema e para análise estatística (abre no Excel).
     """
     gestor = carregar_gestor()
+    geridos = modulos_geridos(gestor)   # None = coordenador (todos)
     linhas = []
     for m in gestor.modulos:
+        if geridos is not None and m.nome not in geridos:
+            continue   # professor: salta módulos que não gere
         for av in m.avaliacoes:
             for email in av.notas:
                 linhas.append([m.nome, m.ufcd, av.descricao, av.peso,
@@ -2569,6 +2589,60 @@ def export_pdf():
         return jsonify({"error": str(e)}), 500
 
 
+# Caminho do logótipo para o carimbo dos PDF (resolvido a partir deste ficheiro,
+# para funcionar seja qual for a pasta de trabalho do processo).
+_LOGO_PDF = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         "static", "forave-logo.png")
+
+
+def _carimbo_institucional(canvas, doc):
+    """
+    Desenha, em TODAS as páginas de um PDF, uma faixa institucional de rodapé:
+    logótipo + nome da escola, emissão automática (data/hora), código do
+    documento e número de página. Dá um ar oficial e dificulta a montagem à
+    mão de um documento falso.
+
+    Não é uma assinatura digital criptográfica — é um carimbo de emissão pelo
+    sistema. O código é gerado UMA vez por documento (guardado em doc) e
+    repetido em todas as páginas, para o mesmo PDF ter sempre o mesmo código.
+    """
+    if not hasattr(doc, "_carimbo_info"):
+        agora = datetime.now()
+        semente = agora.strftime("%Y%m%d%H%M%S%f")
+        codigo = "FRV-" + agora.strftime("%Y%m%d-%H%M%S") + "-" + \
+                 hashlib.sha1(semente.encode("utf-8")).hexdigest()[:6].upper()
+        doc._carimbo_info = (agora.strftime("%d/%m/%Y %H:%M"), codigo)
+    emitido, codigo = doc._carimbo_info
+
+    largura = doc.pagesize[0]
+    canvas.saveState()
+    # Linha separadora (dourado FORAVE).
+    canvas.setStrokeColor(colors.HexColor("#f7c202"))
+    canvas.setLineWidth(1)
+    canvas.line(1.2 * cm, 1.45 * cm, largura - 1.2 * cm, 1.45 * cm)
+    # Logótipo (se existir; nunca rebenta o PDF).
+    try:
+        canvas.drawImage(_LOGO_PDF, 1.2 * cm, 0.7 * cm, height=0.7 * cm,
+                         preserveAspectRatio=True, anchor="sw", mask="auto")
+    except Exception:
+        pass
+    # Nome da instituição.
+    canvas.setFillColor(colors.HexColor("#0d4a30"))
+    canvas.setFont("Helvetica-Bold", 7.5)
+    canvas.drawString(3.3 * cm, 1.05 * cm, "FORAVE — Escola Profissional")
+    # Linha de emissão + código do documento.
+    canvas.setFillColor(colors.HexColor("#5a6b62"))
+    canvas.setFont("Helvetica", 6.5)
+    canvas.drawString(3.3 * cm, 0.7 * cm,
+                      "Documento gerado automaticamente pelo Gestor de Cronograma "
+                      "em " + emitido + "  ·  Código do documento: " + codigo)
+    # Número de página (à direita).
+    canvas.setFillColor(colors.HexColor("#5a6b62"))
+    canvas.setFont("Helvetica", 7)
+    canvas.drawRightString(largura - 1.2 * cm, 1.05 * cm, "Página " + str(doc.page))
+    canvas.restoreState()
+
+
 def gerar_relatorio_pdf(gestor):
     """
     Constrói o PDF do relatório (módulos + avaliações) em memória.
@@ -2583,7 +2657,7 @@ def gerar_relatorio_pdf(gestor):
     doc = SimpleDocTemplate(
         buffer, pagesize=landscape(A4),
         rightMargin=0.5 * cm, leftMargin=0.5 * cm,
-        topMargin=0.5 * cm, bottomMargin=0.5 * cm
+        topMargin=0.5 * cm, bottomMargin=1.8 * cm   # espaço p/ o carimbo
     )
     elementos = []
 
@@ -2655,7 +2729,8 @@ def gerar_relatorio_pdf(gestor):
     ]))
     elementos.append(t2)
 
-    doc.build(elementos)
+    doc.build(elementos, onFirstPage=_carimbo_institucional,
+              onLaterPages=_carimbo_institucional)
     buffer.seek(0)
     return buffer
 
@@ -2673,7 +2748,7 @@ def gerar_pauta_pdf(gestor, modulo_nome):
     doc = SimpleDocTemplate(
         buffer, pagesize=landscape(A4),
         rightMargin=0.6 * cm, leftMargin=0.6 * cm,
-        topMargin=0.6 * cm, bottomMargin=0.6 * cm)
+        topMargin=0.6 * cm, bottomMargin=1.8 * cm)   # espaço p/ o carimbo
     estilos = getSampleStyleSheet()
     estilo_titulo = ParagraphStyle(
         'PautaTit', parent=estilos['Heading1'], fontSize=15,
@@ -2729,7 +2804,8 @@ def gerar_pauta_pdf(gestor, modulo_nome):
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#eef4f1')]),
     ]))
     elementos.append(t)
-    doc.build(elementos)
+    doc.build(elementos, onFirstPage=_carimbo_institucional,
+              onLaterPages=_carimbo_institucional)
     buffer.seek(0)
     return buffer
 
@@ -2744,7 +2820,7 @@ def gerar_auditoria_pdf(registos):
     doc = SimpleDocTemplate(
         buffer, pagesize=landscape(A4),
         rightMargin=0.6 * cm, leftMargin=0.6 * cm,
-        topMargin=0.6 * cm, bottomMargin=0.6 * cm)
+        topMargin=0.6 * cm, bottomMargin=1.8 * cm)   # espaço p/ o carimbo
     estilos = getSampleStyleSheet()
     estilo_titulo = ParagraphStyle(
         'AudTit', parent=estilos['Heading1'], fontSize=15,
@@ -2785,7 +2861,8 @@ def gerar_auditoria_pdf(registos):
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#eef4f1')]),
     ]))
     elementos.append(t)
-    doc.build(elementos)
+    doc.build(elementos, onFirstPage=_carimbo_institucional,
+              onLaterPages=_carimbo_institucional)
     buffer.seek(0)
     return buffer
 
@@ -2887,7 +2964,7 @@ def _tabela_horario(eventos):
 def _doc_pdf_a4(buffer):
     return SimpleDocTemplate(buffer, pagesize=A4, rightMargin=1.2 * cm,
                              leftMargin=1.2 * cm, topMargin=1.2 * cm,
-                             bottomMargin=1.2 * cm)
+                             bottomMargin=1.8 * cm)   # espaço p/ o carimbo
 
 
 def gerar_horario_pdf(titulo, eventos, subtitulo=""):
@@ -2904,7 +2981,7 @@ def gerar_horario_pdf(titulo, eventos, subtitulo=""):
         Paragraph(f"<b>{_xml_escape(titulo)}</b>", est_tit),
         Paragraph(rodape + f"gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')} — FORAVE", est_sub),
         _tabela_horario(eventos),
-    ])
+    ], onFirstPage=_carimbo_institucional, onLaterPages=_carimbo_institucional)
     buffer.seek(0)
     return buffer
 
@@ -2955,7 +3032,8 @@ def gerar_resumo_aluno_pdf(dados):
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#eef4f1')]),
         ]))
         elementos.append(t)
-    doc.build(elementos)
+    doc.build(elementos, onFirstPage=_carimbo_institucional,
+              onLaterPages=_carimbo_institucional)
     buffer.seek(0)
     return buffer
 

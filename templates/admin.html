@@ -252,6 +252,15 @@
           <a href="{{ url_for('admin_exportar_modulos_csv') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-filetype-csv me-1"></i>Exportar módulos (CSV)</a>
         </div>
         {% endif %}
+        {# Exportações do PROFESSOR — limitadas aos módulos que ele gere
+           (âmbito aplicado nas rotas via modulos_geridos). Para imprimir,
+           arquivar ou fazer análise estatística no Excel. #}
+        {% if papel == 'professor' %}
+        <div class="d-flex flex-wrap justify-content-end gap-2 mb-2">
+          <a href="{{ url_for('admin_exportar_notas_csv') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-filetype-csv me-1"></i>Exportar as minhas notas (CSV)</a>
+          <a href="{{ url_for('admin_exportar_formandos_csv') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-people me-1"></i>Exportar os meus alunos (CSV)</a>
+        </div>
+        {% endif %}
 
         {# Criar e importar módulos é reservado ao COORDENADOR (não aos
            professores, que só gerem os seus módulos já existentes). #}
