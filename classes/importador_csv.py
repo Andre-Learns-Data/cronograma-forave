@@ -51,7 +51,12 @@ class ImportadorCSV:
 
         Retorna:
             dict: {"importados": 0, "saltados": 0, "erros": 0,
-                   "erros_detalhe": []}
+                   "erros_detalhe": [], "saltados_detalhe": []}
+
+        'erros_detalhe' lista, linha a linha, o que falhou; 'saltados_detalhe'
+        lista, linha a linha, QUAL o registo que já existia e foi saltado — é
+        o que permite ao relatório dizer "o módulo X já existia", em vez de só
+        contar os saltados.
 
         Usado pelos três métodos de importação para começarem de um
         estado limpo — evita repetir a mesma estrutura três vezes.
@@ -61,6 +66,7 @@ class ImportadorCSV:
         resumo["saltados"] = 0
         resumo["erros"] = 0
         resumo["erros_detalhe"] = []
+        resumo["saltados_detalhe"] = []
         return resumo
 
     def _abrir_csv(self, caminho):
@@ -165,6 +171,8 @@ class ImportadorCSV:
                 # Saltar duplicados (validação da Sessão 3)
                 if gestor.modulo_existe(nome):
                     resumo["saltados"] = resumo["saltados"] + 1
+                    resumo["saltados_detalhe"].append(
+                        f"Linha {numero_linha}: módulo '{nome}' já existia — saltado")
                     continue
 
                 professor = linha["professor"].strip()
@@ -255,6 +263,8 @@ class ImportadorCSV:
                 # Saltar duplicados pelo email (chave única — Sessão 2)
                 if gestor.formando_existe(email):
                     resumo["saltados"] = resumo["saltados"] + 1
+                    resumo["saltados_detalhe"].append(
+                        f"Linha {numero_linha}: formando '{email}' já existia — saltado")
                     continue
 
                 nome = linha["nome"].strip()
@@ -316,6 +326,8 @@ class ImportadorCSV:
                 # Saltar duplicados pelo email (chave única — Sessão 2)
                 if gestor.professor_existe(email):
                     resumo["saltados"] = resumo["saltados"] + 1
+                    resumo["saltados_detalhe"].append(
+                        f"Linha {numero_linha}: professor '{email}' já existia — saltado")
                     continue
 
                 nome = linha["nome"].strip()

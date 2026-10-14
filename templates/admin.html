@@ -123,7 +123,7 @@
         <!-- Relatório detalhado da última importação CSV (linhas recusadas).
              O resumo já vai no flash acima; aqui mostra-se QUAIS linhas
              falharam e PORQUÊ (o detalhe que o importador calcula). -->
-        {% if relatorio_import and relatorio_import.erros > 0 %}
+        {% if relatorio_import and (relatorio_import.erros > 0 or relatorio_import.saltados > 0) %}
           <div class="alert alert-warning py-2">
             <div class="d-flex justify-content-between align-items-start">
               <div>
@@ -136,6 +136,17 @@
               <a href="{{ url_for('admin_relatorio_importacao_limpar') }}"
                  class="btn-close ms-2" aria-label="Dispensar"></a>
             </div>
+            {% if relatorio_import.saltados > 0 %}
+            <details class="mt-2">
+              <summary style="cursor:pointer">Ver quais já existiam (saltados)</summary>
+              <ul class="mb-2 mt-2">
+                {% for msg in relatorio_import.saltados_detalhe %}
+                  <li><code>{{ msg }}</code></li>
+                {% endfor %}
+              </ul>
+            </details>
+            {% endif %}
+            {% if relatorio_import.erros > 0 %}
             <details class="mt-2">
               <summary style="cursor:pointer">Ver as linhas que falharam e porquê</summary>
               <ul class="mb-2 mt-2">
@@ -144,6 +155,7 @@
                 {% endfor %}
               </ul>
             </details>
+            {% endif %}
             <a href="{{ url_for('admin_relatorio_importacao_csv') }}"
                class="btn btn-outline-secondary btn-sm mt-1">
               <i class="bi bi-filetype-csv me-1"></i>Descarregar relatório de importação (CSV)

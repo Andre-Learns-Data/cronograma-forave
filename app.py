@@ -1563,16 +1563,22 @@ def _guardar_relatorio_importacao(tipo, resumo):
     O detalhe é limitado a 50 ocorrências para não inchar o cookie de sessão —
     mais do que suficiente para um CSV de turma; acima disso, fica a contagem.
     """
-    detalhe = list(resumo.get('erros_detalhe', []))
-    if len(detalhe) > 50:
-        restantes = len(detalhe) - 50
-        detalhe = detalhe[:50] + [f'... (+{restantes} outra(s) ocorrência(s))']
+    def _cap(lista):
+        # Limita cada lista a 50 ocorrências (não inchar o cookie de sessão).
+        lista = list(lista or [])
+        if len(lista) > 50:
+            restantes = len(lista) - 50
+            lista = lista[:50] + [f'... (+{restantes} outra(s) ocorrência(s))']
+        return lista
+
     session['relatorio_importacao'] = {
         'tipo': tipo,
         'importados': resumo.get('importados', 0),
         'saltados': resumo.get('saltados', 0),
         'erros': resumo.get('erros', 0),
-        'erros_detalhe': detalhe,
+        'erros_detalhe': _cap(resumo.get('erros_detalhe', [])),
+        # QUAL registo já existia (nomeado, linha a linha) — não só a contagem.
+        'saltados_detalhe': _cap(resumo.get('saltados_detalhe', [])),
     }
 
 
@@ -1732,7 +1738,13 @@ def admin_relatorio_importacao_csv():
     escritor.writerow(['ja_existiam', rel.get('saltados', 0)])
     escritor.writerow(['erros', rel.get('erros', 0)])
     escritor.writerow([])
-    escritor.writerow(['ocorrencia'])
+    # Detalhe de QUAIS registos já existiam (saltados), linha a linha.
+    escritor.writerow(['ja_existiam (detalhe)'])
+    for msg in rel.get('saltados_detalhe', []):
+        escritor.writerow([msg])
+    escritor.writerow([])
+    # Detalhe dos erros (linhas recusadas), linha a linha.
+    escritor.writerow(['erros (detalhe)'])
     for msg in rel.get('erros_detalhe', []):
         escritor.writerow([msg])
 

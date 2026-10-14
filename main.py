@@ -433,6 +433,11 @@ def opcao_importar_csv(gestor):  # 10 — Importar dados CSV
     print(f"  Importados: {resumo['importados']}")
     print(f"  Saltados (duplicados): {resumo['saltados']}")
     print(f"  Erros: {resumo['erros']}")
+    # QUAL registo já existia (nomeado, linha a linha), não só a contagem.
+    if resumo.get("saltados_detalhe"):
+        print("\n  Já existiam (saltados):")
+        for msg in resumo["saltados_detalhe"]:
+            print(f"    - {msg}")
     if len(resumo["erros_detalhe"]) > 0:
         print("\n  Detalhe dos erros:")
         for msg in resumo["erros_detalhe"]:
