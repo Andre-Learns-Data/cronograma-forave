@@ -311,7 +311,7 @@ a:focus-visible {
 @media (max-width:860px){ .app-dash-grid, .app-dash-grid-2{ grid-template-columns:1fr; } }
 
 /* ---- Próximas aulas e avaliações ---- */
-.app-proximas{ list-style:none; margin:0; padding:0; }
+.app-proximas{ list-style:none; margin:0; padding:0; max-height:360px; overflow-y:auto; }
 .app-proximas li{ display:flex; align-items:center; gap:.7rem; padding:.55rem 0; border-bottom:1px solid #eef0ee; }
 .app-proximas li:last-child{ border-bottom:0; }
 .app-data-bloco{ flex:0 0 auto; width:44px; text-align:center; border-radius:9px; padding:.3rem 0;
@@ -355,7 +355,7 @@ a:focus-visible {
 .app-chip.t-aval{ color:var(--at-aval); } .app-chip.t-aval .ponto{ background:var(--at-aval); }
 .app-chip.t-horas{ color:var(--at-horas); } .app-chip.t-horas .ponto{ background:var(--at-horas); }
 
-.app-alertas{ list-style:none; margin:0; padding:0; }
+.app-alertas{ list-style:none; margin:0; padding:0; max-height:360px; overflow-y:auto; }
 .app-alertas li{ display:flex; gap:.6rem; padding:.5rem .55rem; border-bottom:1px solid #eef0ee;
   border-left:3px solid transparent; border-radius:6px; cursor:pointer;
   transition:background .12s; }
