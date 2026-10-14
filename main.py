@@ -1,11 +1,24 @@
 # ============================================================
-# main.py — Ponto de entrada do Gestor de Cronograma
+# main.py — Ponto de entrada do Gestor de Cronograma (TERMINAL)
 # ============================================================
 # Versão 2: com integração Google Sheets e envio de emails.
 #
-# O programa funciona SEMPRE, mesmo sem Google Sheets ou
-# email configurados. Cada funcionalidade extra é um bónus
-# que se activa se as credenciais existirem.
+# O QUE É: este ficheiro é a INTERFACE DE TERMINAL (o menu 1-14,
+# S, 0). É UM dos canais da aplicação — o irmão `app.py` é o canal
+# WEB. Ambos são cascas finas à volta do MESMO cérebro: a classe
+# GestorCronograma (gestor_cronograma.py), que guarda os dados e
+# as regras e não sabe nada de terminal, web ou email.
+#   "Uma lógica, vários canais": a regra de negócio vive num só
+#   sítio; aqui só tratamos de ler input e mostrar resultados.
+# Este ficheiro, então: lê o .env, liga as integrações opcionais,
+# mostra o menu e, a cada escolha, chama o gestor para fazer o
+# trabalho e apresenta o que ele devolve.
+#
+# O programa funciona SEMPRE, mesmo sem Google Sheets ou email
+# configurados. Cada integração extra é um bónus que se activa só
+# se as credenciais existirem no .env — por isso o banner do menu
+# mostra [Google Sheets: ON/OFF] [Email: ON/OFF] (ON = configurado
+# e ligado; OFF = não configurado, mas o programa corre na mesma).
 #
 # Executar com: python main.py
 # ============================================================
@@ -65,7 +78,14 @@ def carregar_configuracao():
 
 
 def mostrar_menu(gsheets_activo, email_activo):
-    """Mostra o menu principal."""
+    """Mostra o menu principal e o estado das integrações opcionais.
+
+    O banner [Google Sheets: ON/OFF] [Email: ON/OFF] diz, de relance,
+    quais os bónus estão activos neste arranque: ON = há credenciais no
+    .env e a ligação está de pé; OFF = não configurado — mas o programa
+    corre na mesma (as duas integrações são opcionais). Devolve a opção
+    que o utilizador escreveu.
+    """
     cabecalho("GESTOR DE CRONOGRAMA — FORAVE")
     estado_gs = "ON" if gsheets_activo else "OFF"
     estado_em = "ON" if email_activo else "OFF"
@@ -93,12 +113,24 @@ def mostrar_menu(gsheets_activo, email_activo):
 
 
 def opcao_ver_cronograma(gestor): # 1 — Ver cronograma (módulos)
+    """Opção 1 — Lista os módulos do cronograma (só leitura).
+
+    A listagem em si é feita pelo gestor (gestor.listar_modulos); esta
+    camada só limpa o ecrã, põe o cabeçalho e espera por uma tecla.
+    """
     limpar_ecra()
     cabecalho("CRONOGRAMA — MÓDULOS")
     gestor.listar_modulos()
     pausa()
 
 def opcao_adicionar_modulo(gestor): # 2 — Adicionar módulo
+    """Opção 2 — Cria um módulo novo (pede os campos no terminal).
+
+    Recolhe nome, UFCD (opcional), professor, horas e datas de sessão; o
+    estado (pendente/em curso/concluído) é inferido das horas. A escrita
+    e a validação de duplicados ficam no gestor — aqui só se pede o input
+    e se mostra o resultado.
+    """
     limpar_ecra()
     cabecalho("ADICIONAR MÓDULO")
     nome = pedir_texto("  Nome do módulo: ")
@@ -144,12 +176,19 @@ def opcao_adicionar_modulo(gestor): # 2 — Adicionar módulo
     pausa()
 
 def opcao_ver_professores(gestor): # 3 — Ver professores
+    """Opção 3 — Lista os professores do curso (só leitura)."""
     limpar_ecra()
     cabecalho("PROFESSORES")
     gestor.listar_professores()
     pausa()
 
 def opcao_adicionar_professor(gestor): # 4 — Adicionar professor
+    """Opção 4 — Cria um professor (nome, email, telefone, módulos).
+
+    O email é a chave única (um professor = um email); a validação de
+    duplicado é feita pelo gestor, logo após o input do email, para não
+    pedir o resto dos dados em vão.
+    """
     limpar_ecra()
     cabecalho("ADICIONAR PROFESSOR")
     nome = pedir_texto("  Nome: ")
@@ -181,12 +220,19 @@ def opcao_adicionar_professor(gestor): # 4 — Adicionar professor
     pausa()
 
 def opcao_ver_formandos(gestor): # 5 — Ver formandos
+    """Opção 5 — Lista os formandos (alunos) do curso (só leitura)."""
     limpar_ecra()
     cabecalho("FORMANDOS")
     gestor.listar_formandos()
     pausa()
 
-def opcao_adicionar_formando(gestor):
+def opcao_adicionar_formando(gestor): # 6 — Adicionar formando
+    """Opção 6 — Inscreve um formando (aluno) no curso.
+
+    Pede nome, email (chave única) e os módulos em que fica inscrito. É a
+    mesma validação de duplicado (gestor.formando_existe) que a importação
+    CSV reutiliza para decidir se cada linha é um aluno novo.
+    """
     limpar_ecra()
     cabecalho("ADICIONAR FORMANDO")
     nome = pedir_texto("  Nome: ")
@@ -304,6 +350,7 @@ def opcao_registar_alteracao(gestor, gsheets, email_sender): # 7 — Regista alt
     pausa()
 
 def opcao_ver_alteracoes(gestor): # 8 — Ver histórico de alterações
+    """Opção 8 — Mostra o histórico (auditoria) de alterações ao cronograma."""
     limpar_ecra()
     cabecalho("HISTÓRICO DE ALTERAÇÕES")
     gestor.listar_alteracoes()
@@ -603,6 +650,12 @@ def opcao_gerar_qr(gestor):  # 14 — Gerar QR code da página/dashboard
     pausa()
 
 def opcao_sincronizar(gestor, gsheets): # S — Sincronizar com Google Sheets
+    """Opção S — Escreve os dados locais para o Google Sheet.
+
+    Só funciona se o Google Sheets estiver configurado e ligado (senão
+    avisa e volta). Escreve os dados LOCAIS por cima da folha na cloud —
+    por isso ao sair o programa pergunta antes de sincronizar (ver main()).
+    """
     limpar_ecra()
     cabecalho("SINCRONIZAR COM GOOGLE SHEETS")
     if gsheets is None or not gsheets.conectado:
